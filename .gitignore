@@ -7,6 +7,18 @@
 *.sln.docstates
 *.DotSettings.user
 
+## NuGet Packages
+packages/
+*.nupkg
+nuget.exe
+
+## Old software backups, database dumps & large installers (kept locally)
+oldsoftware/
+*.bak
+*.rar
+*.iso
+
+
 ## OS temporary files
 Thumbs.db
 ehthumbs.db
