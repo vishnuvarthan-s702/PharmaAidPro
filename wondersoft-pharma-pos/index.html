@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PharmaAid Pro | Modern Wondersoft Shopaid Pharmacy ERP & POS</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="brand-section">
+        <div class="logo-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
+          PharmaAid Pro
+        </div>
+        <div class="store-details">
+          <span class="store-name" id="hdr-store-name">THE NETAJI MEDICAL STORE</span>
+          <div class="store-meta">
+            <span class="meta-pill" id="hdr-dl-no">DL: 20B/21B-NGL-10492</span>
+            <span class="meta-pill" id="hdr-gstin">GSTIN: 33AAAAA0000A1Z5</span>
+            <span class="meta-pill" id="hdr-city">Nagercoil</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <div class="hotkey-strip">
+          <span class="hk-badge"><span class="hk-key">F1</span> Help</span>
+          <span class="hk-badge"><span class="hk-key">F2</span> Billing</span>
+          <span class="hk-badge"><span class="hk-key">F3</span> Generic</span>
+          <span class="hk-badge"><span class="hk-key">F4</span> Stock</span>
+          <span class="hk-badge"><span class="hk-key">F7</span> Park</span>
+          <span class="hk-badge"><span class="hk-key">F10</span> Settle</span>
+          <span class="hk-badge"><span class="hk-key">F12</span> Print</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="till-status-badge" onclick="switchTab('till')" title="Click to view Cash Till Status">
+          <div class="till-dot"></div>
+          <span>Till: <strong id="hdr-till-cash">₹1,500.00</strong></span>
+        </div>
+        <div style="font-size: 11.5px; color: #94a3b8; font-family: var(--font-mono);" id="live-clock">
+          16:00:00
+        </div>
+        <button class="header-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+        <button class="header-btn" onclick="openHotkeysModal()" title="Keyboard Shortcuts">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"/></svg>
+          Hotkeys
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="nav-bar">
+      <button class="nav-tab active" data-tab="pos" onclick="switchTab('pos')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        POS Billing (F2)
+      </button>
+      <button class="nav-tab" data-tab="inventory" onclick="switchTab('inventory')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+        Inventory & Batches (F4)
+      </button>
+      <button class="nav-tab" data-tab="purchase" onclick="switchTab('purchase')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/></svg>
+        Purchase Inward
+      </button>
+      <button class="nav-tab" data-tab="substitutes" onclick="switchTab('substitutes')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+        Generic Finder (F3)
+      </button>
+      <button class="nav-tab" data-tab="expiry" onclick="switchTab('expiry')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Expiry & Damage
+        <span class="tab-badge" id="badge-expiry-count">0</span>
+      </button>
+      <button class="nav-tab" data-tab="schedule" onclick="switchTab('schedule')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Schedule H/H1 Register
+      </button>
+      <button class="nav-tab" data-tab="customers" onclick="switchTab('customers')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Customers & Khata
+      </button>
+      <button class="nav-tab" data-tab="doctors" onclick="switchTab('doctors')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></svg>
+        Doctor Master
+      </button>
+      <button class="nav-tab" data-tab="suppliers" onclick="switchTab('suppliers')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        Suppliers
+      </button>
+      <button class="nav-tab" data-tab="reports" onclick="switchTab('reports')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        GST & Sales Reports
+      </button>
+      <button class="nav-tab" data-tab="till" onclick="switchTab('till')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Till / Shift
+      </button>
+      <button class="nav-tab" data-tab="settings" onclick="switchTab('settings')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings & Backup
+      </button>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-view-container">
+
+      <!-- ========================================== -->
+      <!-- VIEW 1: POS BILLING STATION (F2)          -->
+      <!-- ========================================== -->
+      <section id="view-pos" class="view-section active">
+        <div class="pos-layout">
+          <!-- Left: Search, Quick Entry & Bill Items Table -->
+          <div class="pos-left">
+            <div class="card fast-search-card">
+              <div class="search-input-row">
+                <div class="search-field-wrapper">
+                  <svg class="search-icon-pos" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input type="text" id="pos-search-input" class="search-input" placeholder="Type Medicine Name, Salt / Molecule, or Scan Barcode... (Press F2 or Enter)" autocomplete="off">
+                  <div id="pos-search-dropdown" class="search-results-dropdown"></div>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="openSubstituteModal()" title="Find Generic Alternatives (F3)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></svg>
+                  Substitutes (F3)
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="openHeldBillsModal()" title="Held / Parked Bills">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+                  Parked (<span id="parked-count-badge">0</span>)
+                </button>
+              </div>
+
+              <!-- Quick Selection Details Strip (Shown when item is being added) -->
+              <div id="quick-entry-bar" class="quick-entry-row" style="display: none;">
+                <div class="quick-field" style="flex: 2;">
+                  <label>Selected Medicine</label>
+                  <input type="text" id="qe-item-name" class="quick-input" readonly>
+                </div>
+                <div class="quick-field" style="width: 140px;">
+                  <label>Batch No (Exp)</label>
+                  <select id="qe-batch-select" class="field-select" style="padding: 4px 6px; font-size: 11.5px;" onchange="onBatchSelectChange()"></select>
+                </div>
+                <div class="quick-field" style="width: 100px;">
+                  <label>Unit / Type</label>
+                  <select id="qe-unit-type" class="field-select" style="padding: 4px 6px; font-size: 11.5px;" onchange="recalcQuickEntryTotal()">
+                    <option value="strip">Full Strip</option>
+                    <option value="loose">Loose Tabs</option>
+                  </select>
+                </div>
+                <div class="quick-field" style="width: 75px;">
+                  <label>Quantity</label>
+                  <input type="number" id="qe-qty" class="quick-input" value="1" min="1" oninput="recalcQuickEntryTotal()">
+                </div>
+                <div class="quick-field" style="width: 80px;">
+                  <label>Price (₹)</label>
+                  <input type="number" id="qe-price" class="quick-input" readonly>
+                </div>
+                <div class="quick-field" style="width: 65px;">
+                  <label>Disc %</label>
+                  <input type="number" id="qe-disc" class="quick-input" value="0" min="0" max="100" oninput="recalcQuickEntryTotal()">
+                </div>
+                <div class="quick-field" style="width: 85px;">
+                  <label>Total (₹)</label>
+                  <input type="text" id="qe-line-total" class="quick-input" style="font-weight: 700; color: var(--primary);" readonly>
+                </div>
+                <button class="btn btn-accent btn-sm" style="margin-top: 14px;" onclick="confirmAddLineItem()">
+                  + Add Item
+                </button>
+                <button class="btn btn-outline btn-sm" style="margin-top: 14px;" onclick="cancelQuickEntry()">
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- Bill Table Card -->
+            <div class="card pos-table-card">
+              <div class="table-header-strip">
+                <span class="table-title">Current Invoice Items (<span id="pos-item-count">0</span> items)</span>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-outline btn-sm" onclick="clearCurrentBill()">Clear Bill</button>
+                </div>
+              </div>
+              <div class="table-scroll-container">
+                <table class="data-table" id="pos-items-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 35px;">#</th>
+                      <th>Medicine Name / Composition</th>
+                      <th>Batch</th>
+                      <th>Expiry</th>
+                      <th>Rack</th>
+                      <th>Sch</th>
+                      <th>Unit</th>
+                      <th style="text-align: right;">Qty</th>
+                      <th style="text-align: right;">MRP (₹)</th>
+                      <th style="text-align: right;">Disc %</th>
+                      <th style="text-align: right;">Tax %</th>
+                      <th style="text-align: right;">Amount (₹)</th>
+                      <th style="width: 40px; text-align: center;">Act</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pos-items-body">
+                    <!-- Populated by JavaScript -->
+                    <tr id="pos-empty-row">
+                      <td colspan="13" style="text-align: center; padding: 40px 10px; color: var(--text-muted);">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                        <p style="font-weight: 600;">Invoice is currently empty</p>
+                        <p style="font-size: 11px;">Search medicines above or press F2 to begin billing.</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Patient, Doctor, Schedule Alert, Summary & Settlement -->
+          <div class="pos-right">
+            <!-- Customer & Doctor Card -->
+            <div class="card customer-doc-card">
+              <div class="field-group">
+                <div class="field-label">
+                  <span>Customer / Patient</span>
+                  <a href="#" style="font-size: 11px; color: var(--primary);" onclick="openAddCustomerModal(); return false;">+ New</a>
+                </div>
+                <select id="pos-customer-select" class="field-select" onchange="onCustomerSelectChange()">
+                  <option value="walkin">Walk-in Customer (Cash)</option>
+                  <!-- Populated by JS -->
+                </select>
+                <div id="pos-cust-info" style="font-size: 11px; color: var(--text-muted); display: none;">
+                  Khata Balance: <strong id="pos-cust-khata" style="color: var(--danger);">₹0.00</strong> | Points: <strong id="pos-cust-points">0</strong>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <div class="field-label">
+                  <span>Prescribing Doctor</span>
+                  <a href="#" style="font-size: 11px; color: var(--primary);" onclick="openAddDoctorModal(); return false;">+ New</a>
+                </div>
+                <select id="pos-doctor-select" class="field-select">
+                  <option value="none">-- Over The Counter (Self) --</option>
+                  <!-- Populated by JS -->
+                </select>
+              </div>
+
+              <!-- Schedule H/H1 Warning Box -->
+              <div id="schedule-alert-box" class="schedule-warning-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div>
+                  <strong>SCHEDULED DRUGS DETECTED</strong>
+                  <div style="font-size: 10.5px; font-weight: normal; margin-top: 2px;">
+                    This invoice contains Schedule H/H1 medicines. Doctor details are mandatory for compliance register.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bill Totals & Calculation Card -->
+            <div class="card bill-summary-card">
+              <div>
+                <div class="summary-rows">
+                  <div class="summary-row">
+                    <span>Gross Subtotal</span>
+                    <span id="pos-subtotal" style="font-family: var(--font-mono); font-weight: 600;">₹0.00</span>
+                  </div>
+                  <div class="summary-row">
+                    <span>Overall Discount</span>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                      <input type="number" id="pos-bill-disc" style="width: 50px; padding: 2px 4px; font-size: 11px; text-align: right;" value="0" min="0" max="100" oninput="recalcBillTotals()">
+                      <span>% =</span>
+                      <span id="pos-disc-amt" style="font-family: var(--font-mono);">₹0.00</span>
+                    </div>
+                  </div>
+                  <div class="summary-row">
+                    <span>Taxable Value</span>
+                    <span id="pos-taxable" style="font-family: var(--font-mono);">₹0.00</span>
+                  </div>
+                  <div class="summary-row">
+                    <span>GST (CGST + SGST)</span>
+                    <span id="pos-gst-amt" style="font-family: var(--font-mono);">₹0.00</span>
+                  </div>
+                  <div class="summary-row">
+                    <span>Round Off</span>
+                    <span id="pos-roundoff" style="font-family: var(--font-mono);">₹0.00</span>
+                  </div>
+                </div>
+
+                <!-- Grand Total Banner -->
+                <div class="grand-total-banner">
+                  <div>
+                    <div class="gt-label">Net Payable</div>
+                    <div style="font-size: 10.5px; color: #94a3b8;">Tax Inclusive</div>
+                  </div>
+                  <div class="gt-amount" id="pos-grand-total">₹0.00</div>
+                </div>
+              </div>
+
+              <!-- Bottom Action Buttons -->
+              <div class="bill-action-grid">
+                <button class="btn btn-outline" onclick="holdCurrentBill()" title="Hold current bill (F7)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                  Park Bill (F7)
+                </button>
+                <button class="btn btn-outline" onclick="printLastBill()" title="Print Last Bill">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Reprint Bill
+                </button>
+                <button class="btn btn-settle" onclick="openTenderModal()" title="Settle and Payment (F10)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  SETTLE & PAY (F10)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: INVENTORY & BATCHES (F4)          -->
+      <!-- ========================================== -->
+      <section id="view-inventory" class="view-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Medicines</span>
+              <span class="stat-val" id="stat-total-items">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Stock Valuation (MRP)</span>
+              <span class="stat-val" id="stat-stock-valuation">₹0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Low Stock Items</span>
+              <span class="stat-val" id="stat-low-stock">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Near / Expired Batches</span>
+              <span class="stat-val" id="stat-expired-count">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar-row">
+            <div class="filter-group">
+              <input type="text" id="inv-search-input" class="field-input" style="width: 280px;" placeholder="Filter by name, salt, batch, rack..." oninput="renderInventoryTable()">
+              <select id="inv-filter-status" class="field-select" onchange="renderInventoryTable()">
+                <option value="all">All Batches</option>
+                <option value="low">Low Stock (< 10)</option>
+                <option value="near_expiry">Expiring within 90 days</option>
+                <option value="expired">Expired Batches</option>
+              </select>
+              <select id="inv-filter-schedule" class="field-select" onchange="renderInventoryTable()">
+                <option value="all">All Schedules</option>
+                <option value="General">General / OTC</option>
+                <option value="H">Schedule H</option>
+                <option value="H1">Schedule H1</option>
+              </select>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-outline" onclick="openStockAdjustmentModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                Stock Adjustment
+              </button>
+              <button class="btn btn-primary" onclick="openAddMedicineModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                + Add New Medicine
+              </button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto; max-height: calc(100vh - 290px);">
+            <table class="data-table" id="inventory-table">
+              <thead>
+                <tr>
+                  <th>Medicine Name & Form</th>
+                  <th>Generic Molecule / Salt</th>
+                  <th>Manufacturer</th>
+                  <th>Batch #</th>
+                  <th>Expiry</th>
+                  <th>Rack</th>
+                  <th>Sch</th>
+                  <th style="text-align: right;">Pack</th>
+                  <th style="text-align: right;">Stock (Packs)</th>
+                  <th style="text-align: right;">Stock (Loose)</th>
+                  <th style="text-align: right;">PTR (₹)</th>
+                  <th style="text-align: right;">MRP (₹)</th>
+                  <th style="text-align: center;">Status</th>
+                  <th style="text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-tbody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 3: PURCHASE INWARD                    -->
+      <!-- ========================================== -->
+      <section id="view-purchase" class="view-section">
+        <div class="card" style="margin-bottom: 14px;">
+          <h3 style="margin-bottom: 12px; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/></svg>
+            Supplier Purchase Inward Invoice Entry
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px;">
+            <div class="field-group">
+              <label class="field-label">Supplier / Distributor</label>
+              <select id="pur-supplier-select" class="field-select">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Supplier Invoice No</label>
+              <input type="text" id="pur-invoice-no" class="field-input" placeholder="e.g. INV-88492">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Invoice Date</label>
+              <input type="date" id="pur-invoice-date" class="field-input">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Payment Terms</label>
+              <select id="pur-payment-terms" class="field-select">
+                <option value="Credit 30 Days">Credit 30 Days</option>
+                <option value="Credit 15 Days">Credit 15 Days</option>
+                <option value="Cash / Immediate">Cash / Immediate</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Purchase Line Items Entry Grid -->
+          <div style="background: var(--bg-muted); padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 14px;">
+            <div style="font-weight: 700; font-size: 12px; margin-bottom: 8px; color: var(--text-muted);">Add Purchase Item:</div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: flex-end;">
+              <div class="field-group">
+                <label class="field-label">Medicine</label>
+                <select id="pur-item-select" class="field-select" style="font-size: 12px;"></select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Batch No</label>
+                <input type="text" id="pur-item-batch" class="field-input" placeholder="BT102" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Expiry (MM/YY)</label>
+                <input type="text" id="pur-item-exp" class="field-input" placeholder="10/28" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Pack Qty</label>
+                <input type="number" id="pur-item-qty" class="field-input" value="10" min="1" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Free Scheme</label>
+                <input type="number" id="pur-item-free" class="field-input" value="0" min="0" placeholder="Free" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">PTR (Cost ₹)</label>
+                <input type="number" id="pur-item-ptr" class="field-input" placeholder="0.00" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">MRP (₹)</label>
+                <input type="number" id="pur-item-mrp" class="field-input" placeholder="0.00" style="font-size: 12px;">
+              </div>
+              <div class="field-group">
+                <label class="field-label">GST %</label>
+                <select id="pur-item-gst" class="field-select" style="font-size: 12px;">
+                  <option value="12">12%</option>
+                  <option value="5">5%</option>
+                  <option value="18">18%</option>
+                  <option value="0">0%</option>
+                </select>
+              </div>
+              <button class="btn btn-accent btn-sm" onclick="addPurchaseLineItem()" style="height: 32px;">+ Add Line</button>
+            </div>
+          </div>
+
+          <!-- Purchase Items Table -->
+          <div style="overflow-x: auto; max-height: 250px; margin-bottom: 12px;">
+            <table class="data-table" id="pur-items-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Medicine</th>
+                  <th>Batch</th>
+                  <th>Expiry</th>
+                  <th style="text-align: right;">Billed Qty</th>
+                  <th style="text-align: right;">Free Qty</th>
+                  <th style="text-align: right;">PTR (₹)</th>
+                  <th style="text-align: right;">MRP (₹)</th>
+                  <th style="text-align: right;">GST %</th>
+                  <th style="text-align: right;">Total Amount (₹)</th>
+                  <th style="text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pur-items-tbody">
+                <tr id="pur-empty-row">
+                  <td colspan="11" style="text-align: center; color: var(--text-muted); padding: 20px;">No items entered yet. Add lines above.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+            <div style="font-size: 13px; color: var(--text-muted);">
+              Total Inward Value: <strong id="pur-total-val" style="font-size: 18px; color: var(--primary-dark); font-family: var(--font-mono);">₹0.00</strong>
+            </div>
+            <button class="btn btn-primary btn-lg" onclick="savePurchaseInvoice()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+              Save Inward & Update Batches
+            </button>
+          </div>
+        </div>
+
+        <!-- Inward History -->
+        <div class="card">
+          <div class="table-title" style="margin-bottom: 8px;">Recent Purchase Invoices</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Invoice #</th>
+                <th>Items Count</th>
+                <th style="text-align: right;">Total Amount</th>
+                <th>Terms</th>
+                <th style="text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="pur-history-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 4: GENERIC SUBSTITUTE FINDER (F3)    -->
+      <!-- ========================================== -->
+      <section id="view-substitutes" class="view-section">
+        <div class="card" style="margin-bottom: 14px;">
+          <h3 style="margin-bottom: 8px; font-size: 16px;">Generic & Alternative Medicine Intelligence Engine</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+            Lookup identical molecule/salt combinations across brands. Compare prices and offer high-margin generic substitutes to customers.
+          </p>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="substitute-search-input" class="search-input" placeholder="Search by brand (e.g. Augmentin, Pan 40, Telma 40) or Salt (e.g. Pantoprazole, Amoxicillin)..." oninput="renderSubstituteResults()">
+            <button class="btn btn-primary" onclick="renderSubstituteResults()">Search</button>
+          </div>
+        </div>
+
+        <div id="substitute-results-container">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 5: EXPIRY & DAMAGE SEGREGATION       -->
+      <!-- ========================================== -->
+      <section id="view-expiry" class="view-section">
+        <div class="card" style="margin-bottom: 14px;">
+          <div class="toolbar-row">
+            <div>
+              <h3 style="font-size: 16px;">Expiry & Damaged Medicines Desk</h3>
+              <p style="font-size: 12px; color: var(--text-muted);">
+                Isolate expired medicines from sales counter and generate distributor return debit notes for credit recovery.
+              </p>
+            </div>
+            <button class="btn btn-warning" onclick="generateDebitNoteForExpired()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Generate Supplier Return Debit Note
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px;">
+            <div>
+              <h4 style="color: var(--danger); font-size: 13.5px; margin-bottom: 8px;">⚠️ Expired Batches (Quarantined)</h4>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Batch</th>
+                    <th>Expired Date</th>
+                    <th>Qty</th>
+                    <th>MRP Value</th>
+                  </tr>
+                </thead>
+                <tbody id="expired-items-tbody"></tbody>
+              </table>
+            </div>
+            <div>
+              <h4 style="color: var(--warning); font-size: 13.5px; margin-bottom: 8px;">⏳ Near Expiry Batches (&lt; 90 Days)</h4>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Medicine</th>
+                    <th>Batch</th>
+                    <th>Expiry Date</th>
+                    <th>Days Left</th>
+                    <th>Current Stock</th>
+                  </tr>
+                </thead>
+                <tbody id="near-expiry-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 6: SCHEDULE H & H1 REGISTER           -->
+      <!-- ========================================== -->
+      <section id="view-schedule" class="view-section">
+        <div class="card">
+          <div class="toolbar-row">
+            <div>
+              <h3 style="font-size: 16px;">Schedule H & H1 Statutory Sales Register</h3>
+              <p style="font-size: 12px; color: var(--text-muted);">
+                Mandatory statutory audit register under Drugs & Cosmetics Rules (Rule 65) for inspection by Drug Inspectors.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-outline" onclick="exportScheduleRegisterCSV()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV for Audit
+              </button>
+              <button class="btn btn-primary" onclick="printScheduleRegister()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Register
+              </button>
+            </div>
+          </div>
+
+          <table class="data-table" id="schedule-register-table">
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Bill #</th>
+                <th>Patient Name</th>
+                <th>Patient Contact</th>
+                <th>Prescribing Doctor</th>
+                <th>Doctor Reg No</th>
+                <th>Medicine Dispensed</th>
+                <th>Sch</th>
+                <th>Batch #</th>
+                <th>Exp</th>
+                <th style="text-align: right;">Qty</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-register-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 7: CUSTOMERS & KHATA                  -->
+      <!-- ========================================== -->
+      <section id="view-customers" class="view-section">
+        <div class="card">
+          <div class="toolbar-row">
+            <div>
+              <h3 style="font-size: 16px;">Customers & Credit Khata Ledger</h3>
+              <p style="font-size: 12px; color: var(--text-muted);">
+                Track patient health profiles, purchase records, and credit dues (Khata).
+              </p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddCustomerModal()">+ Add Customer</button>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Customer Name</th>
+                <th>Mobile Number</th>
+                <th>Address</th>
+                <th>Loyalty Points</th>
+                <th style="text-align: right;">Credit Outstanding (Khata)</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customers-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 8: DOCTOR MASTER                      -->
+      <!-- ========================================== -->
+      <section id="view-doctors" class="view-section">
+        <div class="card">
+          <div class="toolbar-row">
+            <div>
+              <h3 style="font-size: 16px;">Doctor Directory & Prescribers</h3>
+              <p style="font-size: 12px; color: var(--text-muted);">Registered medical practitioners for prescription attribution.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddDoctorModal()">+ Add Doctor</button>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Doctor Name</th>
+                <th>Medical Council Reg #</th>
+                <th>Specialization</th>
+                <th>Hospital / Clinic</th>
+                <th>Phone</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="doctors-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 9: SUPPLIER MASTER                    -->
+      <!-- ========================================== -->
+      <section id="view-suppliers" class="view-section">
+        <div class="card">
+          <div class="toolbar-row">
+            <div>
+              <h3 style="font-size: 16px;">Suppliers & Wholesalers Master</h3>
+              <p style="font-size: 12px; color: var(--text-muted);">Pharma distributors, Drug License numbers, GSTIN and payables.</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddSupplierModal()">+ Add Supplier</button>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Supplier Name</th>
+                <th>Contact Person</th>
+                <th>Phone</th>
+                <th>Drug License #</th>
+                <th>GSTIN</th>
+                <th style="text-align: right;">Payables Balance</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="suppliers-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 10: GST & SALES REPORTS               -->
+      <!-- ========================================== -->
+      <section id="view-reports" class="view-section">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Net Sales</span>
+              <span class="stat-val" id="rep-net-sales">₹0.00</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total Invoices</span>
+              <span class="stat-val" id="rep-bill-count">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Estimated Gross Profit</span>
+              <span class="stat-val" id="rep-gross-profit">₹0.00</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Total GST Collected</span>
+              <span class="stat-val" id="rep-total-gst">₹0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 14px;">
+          <div class="table-title" style="margin-bottom: 8px;">GSTR-1 HSN Summary (Ready for GST Portal Filing)</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>HSN Code</th>
+                <th>Description</th>
+                <th>Total Qty</th>
+                <th style="text-align: right;">Total Value (₹)</th>
+                <th style="text-align: right;">Taxable Value (₹)</th>
+                <th style="text-align: right;">CGST (₹)</th>
+                <th style="text-align: right;">SGST (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="gstr1-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="table-title" style="margin-bottom: 8px;">Sales Invoices Journal</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice #</th>
+                <th>Date & Time</th>
+                <th>Customer</th>
+                <th>Doctor</th>
+                <th>Payment Mode</th>
+                <th style="text-align: right;">Amount (₹)</th>
+                <th style="text-align: center;">View / Print</th>
+              </tr>
+            </thead>
+            <tbody id="sales-journal-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 11: TILL / SHIFT                      -->
+      <!-- ========================================== -->
+      <section id="view-till" class="view-section">
+        <div class="card" style="max-width: 650px; margin: 0 auto;">
+          <h3 style="font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Point of Sale Till Management (Day Open / Shift Handover)
+          </h3>
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+            <div class="summary-row">
+              <span>Shift Opening Float:</span>
+              <strong id="till-opening-val">₹1,500.00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Cash Sales Collected:</span>
+              <strong id="till-cash-sales">₹0.00</strong>
+            </div>
+            <div class="summary-row">
+              <span>UPI / Digital Sales:</span>
+              <strong id="till-upi-sales">₹0.00</strong>
+            </div>
+            <div class="summary-row">
+              <span>Khata / Credit Sales:</span>
+              <strong id="till-khata-sales">₹0.00</strong>
+            </div>
+            <div class="summary-row total-row">
+              <span>Expected Cash in Drawer:</span>
+              <strong id="till-expected-cash" style="font-size: 18px; color: var(--accent);">₹1,500.00</strong>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid var(--border); padding-top: 14px; display: flex; gap: 8px;">
+            <button class="btn btn-outline" onclick="openCashDrawer()">Open Cash Drawer</button>
+            <button class="btn btn-primary" onclick="closeShiftDay()">Close Shift & Print Day Summary</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 12: SETTINGS & BACKUP / RESTORE       -->
+      <!-- ========================================== -->
+      <section id="view-settings" class="view-section">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <!-- Store Profile -->
+          <div class="card">
+            <h3 style="font-size: 15px; margin-bottom: 12px;">Store Profile & Drug Licenses</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="field-group">
+                <label class="field-label">Pharmacy Name</label>
+                <input type="text" id="set-store-name" class="field-input" value="THE NETAJI MEDICAL STORE">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Address Line</label>
+                <input type="text" id="set-store-addr" class="field-input" value="No.204/A, Meenakshipuram, Nagercoil-629001">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Drug License No (Form 20B/21B)</label>
+                <input type="text" id="set-store-dl" class="field-input" value="TN/NGL/20B/10492, TN/NGL/21B/10492">
+              </div>
+              <div class="field-group">
+                <label class="field-label">GSTIN Number</label>
+                <input type="text" id="set-store-gstin" class="field-input" value="33AAAAA0000A1Z5">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Store Phone / Mobile</label>
+                <input type="text" id="set-store-phone" class="field-input" value="+91 94431 00000">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Default Invoice Print Format</label>
+                <select id="set-print-format" class="field-select">
+                  <option value="thermal">80mm Thermal Slip (Recommended)</option>
+                  <option value="a4">A4 / A5 Tax Invoice</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="saveStoreSettings()">Save Store Settings</button>
+            </div>
+          </div>
+
+          <!-- Backup & Restore Database -->
+          <div class="card">
+            <h3 style="font-size: 15px; margin-bottom: 12px;">Wondersoft Database Backup & Restore</h3>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+              Export full pharmacy stock, batches, sales journal, and doctors into a portable backup file, or restore existing data.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="background: var(--bg-muted); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                <strong>Download Complete Database Backup (.JSON)</strong>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin: 4px 0 8px 0;">Safe offline backup of all inventory and accounts.</p>
+                <button class="btn btn-accent" onclick="exportDatabaseBackup()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Export Backup File
+                </button>
+              </div>
+
+              <div style="background: var(--bg-muted); padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                <strong>Restore Database from File</strong>
+                <p style="font-size: 11.5px; color: var(--text-muted); margin: 4px 0 8px 0;">Select a previously saved backup file to restore.</p>
+                <input type="file" id="db-restore-file" accept=".json" style="margin-bottom: 8px;">
+                <button class="btn btn-warning btn-sm" onclick="restoreDatabaseBackup()">Restore Database</button>
+              </div>
+
+              <div style="background: #fef2f2; padding: 12px; border-radius: var(--radius-sm); border: 1px solid #ef4444;">
+                <strong style="color: #991b1b;">Reset to Preloaded Demo Data</strong>
+                <p style="font-size: 11.5px; color: #7f1d1d; margin: 4px 0 8px 0;">Resets the catalog back to 25+ real Indian medicines, batches, doctors and suppliers.</p>
+                <button class="btn btn-danger btn-sm" onclick="resetToDemoData()">Reset to Demo Catalog</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODALS                                     -->
+    <!-- ========================================== -->
+
+    <!-- Tender Payment Modal (F10) -->
+    <div id="tender-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Bill Payment & Tender Settle
+          </div>
+          <button class="modal-close-btn" onclick="closeModal('tender-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="tender-container">
+            <!-- Modes -->
+            <div class="tender-modes">
+              <button class="tender-mode-btn active" data-mode="cash" onclick="setTenderMode('cash')">💵 Cash Payment</button>
+              <button class="tender-mode-btn" data-mode="upi" onclick="setTenderMode('upi')">📱 UPI / QR Code</button>
+              <button class="tender-mode-btn" data-mode="card" onclick="setTenderMode('card')">💳 Debit / Credit Card</button>
+              <button class="tender-mode-btn" data-mode="khata" onclick="setTenderMode('khata')">📖 Khata (Credit)</button>
+            </div>
+
+            <!-- Content -->
+            <div class="tender-content">
+              <div style="font-size: 13px; color: var(--text-muted);">Total Amount Payable:</div>
+              <div style="font-size: 30px; font-weight: 800; color: var(--accent); font-family: var(--font-mono);" id="tender-due-display">
+                ₹0.00
+              </div>
+
+              <!-- Cash Mode -->
+              <div id="tender-sec-cash">
+                <div class="field-group" style="margin-bottom: 10px;">
+                  <label class="field-label">Cash Received from Customer</label>
+                  <input type="number" id="tender-cash-input" class="field-input" style="font-size: 18px; font-weight: 700;" placeholder="Enter amount..." oninput="recalcChangeDue()">
+                </div>
+                <div style="font-size: 14px; font-weight: 600; color: var(--text-muted);">
+                  Change to Return: <strong id="tender-change-display" style="color: var(--primary); font-size: 18px; font-family: var(--font-mono);">₹0.00</strong>
+                </div>
+              </div>
+
+              <!-- UPI Mode -->
+              <div id="tender-sec-upi" style="display: none;">
+                <div class="qr-code-box">
+                  <div class="qr-graphic" id="tender-qr-graphic">
+                    <!-- SVG QR Code simulation -->
+                    <svg width="120" height="120" viewBox="0 0 100 100" fill="#0f172a">
+                      <rect x="0" y="0" width="30" height="30" fill="none" stroke="#000" stroke-width="6"/>
+                      <rect x="7" y="7" width="16" height="16"/>
+                      <rect x="70" y="0" width="30" height="30" fill="none" stroke="#000" stroke-width="6"/>
+                      <rect x="77" y="7" width="16" height="16"/>
+                      <rect x="0" y="70" width="30" height="30" fill="none" stroke="#000" stroke-width="6"/>
+                      <rect x="7" y="77" width="16" height="16"/>
+                      <rect x="40" y="10" width="10" height="10"/>
+                      <rect x="55" y="25" width="10" height="10"/>
+                      <rect x="40" y="45" width="20" height="20"/>
+                      <rect x="70" y="55" width="10" height="25"/>
+                      <rect x="85" y="75" width="10" height="10"/>
+                    </svg>
+                  </div>
+                  <div style="font-size: 12px; font-weight: 700;">Scan with GPay / PhonePe / Paytm</div>
+                  <div style="font-size: 11px; color: var(--text-muted);" id="tender-upi-id">UPI: netaji.medical@okaxis</div>
+                </div>
+              </div>
+
+              <!-- Card Mode -->
+              <div id="tender-sec-card" style="display: none;">
+                <div class="field-group">
+                  <label class="field-label">Card Machine / EDC Auth Code</label>
+                  <input type="text" id="tender-card-auth" class="field-input" placeholder="e.g. TXN981249">
+                </div>
+              </div>
+
+              <!-- Khata Mode -->
+              <div id="tender-sec-khata" style="display: none;">
+                <div style="background: var(--warning-light); border: 1px solid var(--warning); padding: 10px; border-radius: var(--radius-sm); font-size: 12px;">
+                  Amount will be added to customer's outstanding balance.
+                  <div style="margin-top: 4px; font-weight: 600;" id="tender-khata-customer-name">Customer: Walk-in</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('tender-modal')">Cancel</button>
+          <button class="btn btn-accent btn-lg" onclick="finalizeBillAndPrint(true)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Complete & Print (F12)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Held / Parked Bills Modal -->
+    <div id="parked-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Parked / Held Bills</div>
+          <button class="modal-close-btn" onclick="closeModal('parked-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th style="text-align: right;">Amount</th>
+                <th style="text-align: center;">Resume</th>
+              </tr>
+            </thead>
+            <tbody id="parked-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Hotkeys Guide Modal (F1) -->
+    <div id="hotkeys-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Keyboard Navigation & Hotkeys Guide</div>
+          <button class="modal-close-btn" onclick="closeModal('hotkeys-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F1</strong> Help / Hotkey Guide</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F2</strong> Focus POS Search / Go to Billing</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F3</strong> Open Generic Substitute Finder</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F4</strong> Open Inventory & Batches</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F7</strong> Park / Hold Current Bill</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F8</strong> Recall / Resume Parked Bill</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F10</strong> Settle Bill & Tender Payment</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">F12</strong> Print Bill (Thermal / A4)</div>
+            <div style="display: flex; gap: 8px; align-items: center;"><strong class="meta-pill" style="color: var(--primary);">Esc</strong> Close modal / Cancel search</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Medicine Modal -->
+    <div id="add-medicine-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Add New Medicine Master</div>
+          <button class="modal-close-btn" onclick="closeModal('add-medicine-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-group" style="grid-column: span 2;">
+              <label class="field-label">Medicine Brand Name</label>
+              <input type="text" id="m-name" class="field-input" placeholder="e.g. Augmentin 625 Duo Tab">
+            </div>
+            <div class="field-group" style="grid-column: span 2;">
+              <label class="field-label">Generic Salt / Composition</label>
+              <input type="text" id="m-salt" class="field-input" placeholder="e.g. Amoxicillin 500mg + Clavulanic Acid 125mg">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Dosage Form</label>
+              <select id="m-form" class="field-select">
+                <option value="Tablet">Tablet</option>
+                <option value="Capsule">Capsule</option>
+                <option value="Syrup">Syrup</option>
+                <option value="Injection">Injection</option>
+                <option value="Ointment">Ointment / Gel</option>
+                <option value="Drops">Eye/Ear Drops</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">Manufacturer / Brand</label>
+              <input type="text" id="m-mfg" class="field-input" placeholder="e.g. GSK / Cipla / Sun">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Drug Schedule</label>
+              <select id="m-schedule" class="field-select">
+                <option value="General">General (OTC)</option>
+                <option value="H">Schedule H</option>
+                <option value="H1">Schedule H1</option>
+                <option value="X">Schedule X (Narcotic)</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label class="field-label">HSN Code</label>
+              <input type="text" id="m-hsn" class="field-input" value="300490">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Pack Size (Tablets/Strip)</label>
+              <input type="number" id="m-pack" class="field-input" value="10">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Rack / Shelf Location</label>
+              <input type="text" id="m-rack" class="field-input" placeholder="e.g. A-02">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Initial Batch No</label>
+              <input type="text" id="m-batch" class="field-input" placeholder="e.g. B2049">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Expiry Date (MM/YY)</label>
+              <input type="text" id="m-exp" class="field-input" placeholder="e.g. 11/28">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Initial Stock (Packs)</label>
+              <input type="number" id="m-stock" class="field-input" value="20">
+            </div>
+            <div class="field-group">
+              <label class="field-label">MRP (₹)</label>
+              <input type="number" id="m-mrp" class="field-input" placeholder="0.00">
+            </div>
+            <div class="field-group">
+              <label class="field-label">PTR / Purchase Rate (₹)</label>
+              <input type="number" id="m-ptr" class="field-input" placeholder="0.00">
+            </div>
+            <div class="field-group">
+              <label class="field-label">GST Slab</label>
+              <select id="m-gst" class="field-select">
+                <option value="12">12%</option>
+                <option value="5">5%</option>
+                <option value="18">18%</option>
+                <option value="0">0%</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('add-medicine-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveNewMedicine()">Save Medicine</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div id="add-customer-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Add Patient / Customer</div>
+          <button class="modal-close-btn" onclick="closeModal('add-customer-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="field-group">
+              <label class="field-label">Customer Name</label>
+              <input type="text" id="cust-name" class="field-input" placeholder="e.g. R. Sundaram">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Mobile Number</label>
+              <input type="text" id="cust-phone" class="field-input" placeholder="e.g. 98410 12345">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Address / Area</label>
+              <input type="text" id="cust-address" class="field-input" placeholder="e.g. Meenakshipuram, Nagercoil">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Credit Limit (₹)</label>
+              <input type="number" id="cust-limit" class="field-input" value="5000">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('add-customer-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveNewCustomer()">Save Customer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Doctor Modal -->
+    <div id="add-doctor-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Add Prescribing Doctor</div>
+          <button class="modal-close-btn" onclick="closeModal('add-doctor-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="field-group">
+              <label class="field-label">Doctor Name</label>
+              <input type="text" id="doc-name" class="field-input" placeholder="e.g. Dr. K. Ramanathan MD">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Medical Council Reg No</label>
+              <input type="text" id="doc-reg" class="field-input" placeholder="e.g. TNMC-48291">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Specialization</label>
+              <input type="text" id="doc-spec" class="field-input" placeholder="e.g. General Physician / Pediatrician">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Hospital / Clinic</label>
+              <input type="text" id="doc-clinic" class="field-input" placeholder="e.g. City Health Clinic">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="text" id="doc-phone" class="field-input" placeholder="e.g. 94431 22334">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('add-doctor-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveNewDoctor()">Save Doctor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Supplier Modal -->
+    <div id="add-supplier-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Add Supplier / Distributor</div>
+          <button class="modal-close-btn" onclick="closeModal('add-supplier-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="field-group">
+              <label class="field-label">Distributor / Agency Name</label>
+              <input type="text" id="sup-name" class="field-input" placeholder="e.g. Apollo Pharma Distributors">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Contact Person</label>
+              <input type="text" id="sup-contact" class="field-input" placeholder="e.g. R. Balaji">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Phone</label>
+              <input type="text" id="sup-phone" class="field-input" placeholder="e.g. 98421 99887">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Drug License No</label>
+              <input type="text" id="sup-dl" class="field-input" placeholder="e.g. TN/NGL/20B/8812">
+            </div>
+            <div class="field-group">
+              <label class="field-label">GSTIN</label>
+              <input type="text" id="sup-gstin" class="field-input" placeholder="e.g. 33AACCA1234F1Z9">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('add-supplier-modal')">Cancel</button>
+          <button class="btn btn-primary" onclick="saveNewSupplier()">Save Supplier</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receive Customer Khata Payment Modal -->
+    <div id="khata-pay-modal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">Record Khata Credit Payment</div>
+          <button class="modal-close-btn" onclick="closeModal('khata-pay-modal')">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="font-size: 14px; font-weight: 600;" id="kp-customer-name">Customer: </div>
+            <div style="font-size: 13px; color: var(--danger);">Outstanding Due: <strong id="kp-balance-display">₹0.00</strong></div>
+            <div class="field-group">
+              <label class="field-label">Payment Received (₹)</label>
+              <input type="number" id="kp-amount" class="field-input" placeholder="Enter received amount">
+            </div>
+            <div class="field-group">
+              <label class="field-label">Payment Mode</label>
+              <select id="kp-mode" class="field-select">
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI / GPay</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeModal('khata-pay-modal')">Cancel</button>
+          <button class="btn btn-accent" onclick="confirmKhataPayment()">Record Payment</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Print Slip / Invoice Hidden Container -->
+    <div id="print-container"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
