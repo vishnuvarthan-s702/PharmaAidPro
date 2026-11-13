@@ -99,7 +99,9 @@ namespace PharmaAidPro.WinForms.Forms
             _cmbTax = new ComboBox
             {
                 Dock = DockStyle.Fill,
-                DropDownStyle = ComboBoxStyle.DropDownList,
+                DropDownStyle = ComboBoxStyle.DropDown,
+                AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+                AutoCompleteSource = AutoCompleteSource.ListItems,
                 FlatStyle = FlatStyle.Flat,
                 Margin = new Padding(0),
                 Font = new Font("Tahoma", 9F, FontStyle.Regular)
@@ -229,6 +231,7 @@ namespace PharmaAidPro.WinForms.Forms
                     e.Handled = true;
                     e.SuppressKeyPress = true;
                     _cmbTax.Focus();
+                    _cmbTax.SelectAll();
                 }
             };
 
@@ -237,6 +240,7 @@ namespace PharmaAidPro.WinForms.Forms
                 if (e.KeyCode == Keys.Enter)
                 {
                     e.Handled = true;
+                    e.SuppressKeyPress = true;
                     _btnOk.PerformClick();
                 }
             };
@@ -321,17 +325,50 @@ namespace PharmaAidPro.WinForms.Forms
 
         private void SelectTaxSlab(decimal taxPercent)
         {
-            int idx = 1; // default 5%
-            if (taxPercent == 0m) idx = 0;
-            else if (taxPercent == 5m) idx = 1;
-            else if (taxPercent == 12m) idx = 2;
-            else if (taxPercent == 18m) idx = 3;
-            else if (taxPercent == 28m) idx = 4;
-            _cmbTax.SelectedIndex = idx;
+            if (taxPercent == 0m) _cmbTax.SelectedIndex = 0;
+            else if (taxPercent == 5m) _cmbTax.SelectedIndex = 1;
+            else if (taxPercent == 12m) _cmbTax.SelectedIndex = 2;
+            else if (taxPercent == 18m) _cmbTax.SelectedIndex = 3;
+            else if (taxPercent == 28m) _cmbTax.SelectedIndex = 4;
+            else
+            {
+                _cmbTax.SelectedIndex = -1;
+                _cmbTax.Text = string.Format(CultureInfo.InvariantCulture, "{0:0.##} % GST", taxPercent);
+            }
         }
 
         private decimal GetSelectedTaxPercent()
         {
+            string raw = (_cmbTax.Text ?? string.Empty).Trim();
+            if (!string.IsNullOrEmpty(raw))
+            {
+                var numChars = new System.Text.StringBuilder();
+                bool dotSeen = false;
+                for (int i = 0; i < raw.Length; i++)
+                {
+                    char c = raw[i];
+                    if (char.IsDigit(c))
+                    {
+                        numChars.Append(c);
+                    }
+                    else if (c == '.' && !dotSeen && numChars.Length > 0)
+                    {
+                        dotSeen = true;
+                        numChars.Append(c);
+                    }
+                    else if (numChars.Length > 0)
+                    {
+                        break;
+                    }
+                }
+
+                decimal parsed;
+                if (numChars.Length > 0 && decimal.TryParse(numChars.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out parsed))
+                {
+                    return parsed;
+                }
+            }
+
             switch (_cmbTax.SelectedIndex)
             {
                 case 0: return 0m;

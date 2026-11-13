@@ -133,7 +133,7 @@ namespace PharmaAidPro.WinForms.Forms
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Rate", HeaderText = "Rate (MRP)", FillWeight = 9, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SaleUnit", HeaderText = "Pack", ReadOnly = true, FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DisPct", HeaderText = "Dis%", FillWeight = 6, DefaultCellStyle = RightStyle() });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TaxPct", HeaderText = "GST%", ReadOnly = true, FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TaxPct", HeaderText = "GST%", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Amount", HeaderText = "Amount", ReadOnly = true, FillWeight = 10, DefaultCellStyle = RightStyle() });
 
             _grid.RowsAdded += delegate { RenumberRows(); };
