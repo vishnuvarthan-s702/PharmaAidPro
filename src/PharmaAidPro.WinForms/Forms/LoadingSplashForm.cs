@@ -72,23 +72,35 @@ namespace PharmaAidPro.WinForms.Forms
             return null;
         }
 
-        private void LoadStoreBackgroundImage()
+        public static Bitmap LoadStoreBitmap()
         {
             try
             {
                 string path = ResolveStoreBackgroundPath();
                 if (!string.IsNullOrEmpty(path) && File.Exists(path))
                 {
-                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    byte[] bytes = File.ReadAllBytes(path);
+                    using (var ms = new MemoryStream(bytes))
+                    using (var tempImg = Image.FromStream(ms))
                     {
-                        _bgImage = Image.FromStream(fs);
+                        var bmp = new Bitmap(tempImg.Width, tempImg.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                        using (var g = Graphics.FromImage(bmp))
+                        {
+                            g.DrawImage(tempImg, 0, 0, tempImg.Width, tempImg.Height);
+                        }
+                        return bmp;
                     }
                 }
             }
             catch
             {
-                _bgImage = null;
             }
+            return null;
+        }
+
+        private void LoadStoreBackgroundImage()
+        {
+            _bgImage = LoadStoreBitmap();
         }
 
         private void Timer_Tick(object sender, EventArgs e)

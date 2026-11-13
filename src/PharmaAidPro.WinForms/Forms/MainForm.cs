@@ -43,13 +43,9 @@ namespace PharmaAidPro.WinForms.Forms
         {
             try
             {
-                string bgPath = LoadingSplashForm.ResolveStoreBackgroundPath();
-                if (!string.IsNullOrEmpty(bgPath) && System.IO.File.Exists(bgPath))
+                _mdiBgImage = LoadingSplashForm.LoadStoreBitmap();
+                if (_mdiBgImage != null)
                 {
-                    using (var fs = new System.IO.FileStream(bgPath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
-                    {
-                        _mdiBgImage = Image.FromStream(fs);
-                    }
                     foreach (Control ctl in this.Controls)
                     {
                         var mdi = ctl as MdiClient;

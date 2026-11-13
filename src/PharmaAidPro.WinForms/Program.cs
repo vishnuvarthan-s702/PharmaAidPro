@@ -22,7 +22,20 @@ namespace PharmaAidPro.WinForms
                 var admin = repo.ValidateUser("Admin", "SHOPAID");
                 int p, b, s;
                 repo.GetDatabaseCounts(out p, out b, out s);
-                Console.WriteLine("DB_OK|" + settings.StoreName + "|" + (admin != null ? admin.UserName : "NO_USER") + "|" + p + "|" + b + "|" + s);
+                string imgStatus = "NO_IMG";
+                using (var bmp = LoadingSplashForm.LoadStoreBitmap())
+                {
+                    if (bmp != null)
+                    {
+                        using (var testCanvas = new System.Drawing.Bitmap(800, 600))
+                        using (var g = System.Drawing.Graphics.FromImage(testCanvas))
+                        {
+                            g.DrawImage(bmp, 0, 0, 800, 600);
+                        }
+                        imgStatus = string.Format("IMG_OK_{0}x{1}", bmp.Width, bmp.Height);
+                    }
+                }
+                Console.WriteLine("DB_OK|" + settings.StoreName + "|" + (admin != null ? admin.UserName : "NO_USER") + "|" + imgStatus + "|" + p + "|" + b + "|" + s);
                 return;
             }
 
