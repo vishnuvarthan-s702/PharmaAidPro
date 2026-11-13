@@ -52,7 +52,17 @@ namespace PharmaAidPro.WinForms.Forms
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control && e.KeyCode == Keys.N)
+            if (e.KeyCode == Keys.F2)
+            {
+                e.Handled = true;
+                OpenSalesPos();
+            }
+            else if (e.KeyCode == Keys.F8)
+            {
+                e.Handled = true;
+                OpenBillCopy();
+            }
+            else if (e.Control && e.KeyCode == Keys.N)
             {
                 e.Handled = true;
                 OpenNewProductModal();
@@ -61,6 +71,21 @@ namespace PharmaAidPro.WinForms.Forms
             {
                 e.Handled = true;
                 OpenPurchaseEntry();
+            }
+        }
+
+        private void OpenSalesPos()
+        {
+            var frm = new SalesPosForm(_repo);
+            frm.SaleCompleted += UpdateStatusBar;
+            frm.ShowDialog(this);
+        }
+
+        private void OpenBillCopy()
+        {
+            using (var frm = new BillCopyForm(_repo))
+            {
+                frm.ShowDialog(this);
             }
         }
 
@@ -114,8 +139,8 @@ namespace PharmaAidPro.WinForms.Forms
             fileMenu.DropDownItems.Add("E&xit", null, delegate { this.Close(); });
 
             var salesMenu = new ToolStripMenuItem("&Sales");
-            salesMenu.DropDownItems.Add("Retail Sales Bill (F2)", null, delegate { ShowComingSoon("Retail Sales Bill (F2)"); });
-            salesMenu.DropDownItems.Add("Bill Copy / Reprint (F8)", null, delegate { ShowComingSoon("Bill Copy / Reprint"); });
+            salesMenu.DropDownItems.Add("Retail Sales Bill (F2)", null, delegate { OpenSalesPos(); });
+            salesMenu.DropDownItems.Add("Bill Copy / Reprint (F8)", null, delegate { OpenBillCopy(); });
 
             var purchaseMenu = new ToolStripMenuItem("&Purchase");
             purchaseMenu.DropDownItems.Add("Purchase Invoice (Ctrl+I)", null, delegate { OpenPurchaseEntry(); });

@@ -328,5 +328,117 @@ namespace PharmaAidPro.WinForms.Data
                 return grnNo;
             }
         }
+
+        public string GetNextBillNo()
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                var settings = conn.QuerySingle<StoreSettings>("SELECT * FROM StoreSettings WHERE Id = 1");
+                return string.Format("{0}{1:000000}", settings.BillPrefix, settings.NextBillNumber);
+            }
+        }
+
+        public string SaveSaleBill(SalesHeader header, List<SalesLine> lines)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            using (var tx = conn.BeginTransaction())
+            {
+                var settings = conn.QuerySingle<StoreSettings>("SELECT * FROM StoreSettings WHERE Id = 1", transaction: tx);
+                int num = settings.NextBillNumber;
+                string billNo = string.Format("{0}{1:000000}", settings.BillPrefix, num);
+                while (conn.ExecuteScalar<int>("SELECT COUNT(*) FROM SalesHeaders WHERE BillNo = @BillNo", new { BillNo = billNo }, tx) > 0)
+                {
+                    num++;
+                    billNo = string.Format("{0}{1:000000}", settings.BillPrefix, num);
+                }
+
+                header.BillNo = billNo;
+                conn.Execute(@"
+                    INSERT INTO SalesHeaders (
+                        BillNo, BillDate, CustomerName, DoctorName, PaymentMode,
+                        BaseAmt, SgstAmt, CgstAmt, TotalGstAmt, RoundOff, NetAmount,
+                        TotalItems, TotalQty, CreatedBy
+                    ) VALUES (
+                        @BillNo, @BillDate, @CustomerName, @DoctorName, @PaymentMode,
+                        @BaseAmt, @SgstAmt, @CgstAmt, @TotalGstAmt, @RoundOff, @NetAmount,
+                        @TotalItems, @TotalQty, @CreatedBy
+                    );", header, tx);
+
+                foreach (var line in lines)
+                {
+                    line.BillNo = billNo;
+                    conn.Execute(@"
+                        INSERT INTO SalesLines (
+                            BillNo, Sno, ProductCode, ProductName, QtyUnits, BatchDesc,
+                            ExpiryMMYY, RateMrp, SaleUnit, DiscPercent, TaxPercent, LineAmount
+                        ) VALUES (
+                            @BillNo, @Sno, @ProductCode, @ProductName, @QtyUnits, @BatchDesc,
+                            @ExpiryMMYY, @RateMrp, @SaleUnit, @DiscPercent, @TaxPercent, @LineAmount
+                        );", line, tx);
+
+                    conn.Execute(@"
+                        UPDATE ProductBatches
+                        SET StockBaseUnits = MAX(0, StockBaseUnits - @QtyUnits)
+                        WHERE ProductCode = @ProductCode AND BatchDesc = @BatchDesc;",
+                        new { line.QtyUnits, line.ProductCode, line.BatchDesc }, tx);
+                }
+
+                if (!string.IsNullOrWhiteSpace(header.CustomerName))
+                {
+                    conn.Execute(@"
+                        INSERT OR IGNORE INTO Customers (CustomerName, KhataBalance) VALUES (@Name, 0);",
+                        new { Name = header.CustomerName.Trim() }, tx);
+
+                    if (header.PaymentMode == "CREDIT")
+                    {
+                        conn.Execute(@"
+                            UPDATE Customers SET KhataBalance = KhataBalance + @Amt WHERE CustomerName = @Name;",
+                            new { Amt = header.NetAmount, Name = header.CustomerName.Trim() }, tx);
+                    }
+                }
+
+                conn.Execute("UPDATE StoreSettings SET NextBillNumber = @NextNum WHERE Id = 1;", new { NextNum = num + 1 }, tx);
+                tx.Commit();
+                return billNo;
+            }
+        }
+
+        public List<SalesHeader> GetRecentSales(string filter)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                var like = "%" + (filter ?? string.Empty).Trim() + "%";
+                return conn.Query<SalesHeader>(@"
+                    SELECT * FROM SalesHeaders
+                    WHERE BillNo LIKE @Like OR COALESCE(CustomerName, '') LIKE @Like
+                    ORDER BY BillNo DESC
+                    LIMIT 100;", new { Like = like }).ToList();
+            }
+        }
+
+        public List<SalesLine> GetSalesLines(string billNo)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                return conn.Query<SalesLine>(@"
+                    SELECT * FROM SalesLines WHERE BillNo = @BillNo ORDER BY Sno;", new { BillNo = billNo }).ToList();
+            }
+        }
+
+        public List<Product> FindGenericSubstitutes(int productCode)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                var prod = conn.QuerySingleOrDefault<Product>("SELECT * FROM Products WHERE ProductCode = @Code", new { Code = productCode });
+                if (prod == null || string.IsNullOrWhiteSpace(prod.Salt)) return new List<Product>();
+
+                return conn.Query<Product>(@"
+                    SELECT p.*,
+                           COALESCE((SELECT SUM(b.StockBaseUnits) FROM ProductBatches b WHERE b.ProductCode = p.ProductCode), 0) AS TotalStockUnits
+                    FROM Products p
+                    WHERE p.Salt = @Salt AND p.ProductCode <> @Code
+                    ORDER BY p.Mrp ASC;", new { prod.Salt, Code = productCode }).ToList();
+            }
+        }
     }
 }
