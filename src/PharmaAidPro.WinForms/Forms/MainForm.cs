@@ -57,6 +57,18 @@ namespace PharmaAidPro.WinForms.Forms
                 e.Handled = true;
                 OpenNewProductModal();
             }
+            else if (e.Control && e.KeyCode == Keys.I)
+            {
+                e.Handled = true;
+                OpenPurchaseEntry();
+            }
+        }
+
+        private void OpenPurchaseEntry()
+        {
+            var frm = new PurchaseEntryForm(_repo);
+            frm.GrnSaved += UpdateStatusBar;
+            frm.ShowDialog(this);
         }
 
         private void OpenNewProductModal()
@@ -106,7 +118,7 @@ namespace PharmaAidPro.WinForms.Forms
             salesMenu.DropDownItems.Add("Bill Copy / Reprint (F8)", null, delegate { ShowComingSoon("Bill Copy / Reprint"); });
 
             var purchaseMenu = new ToolStripMenuItem("&Purchase");
-            purchaseMenu.DropDownItems.Add("Purchase Invoice (Ctrl+I)", null, delegate { ShowComingSoon("Purchase Invoice (Ctrl+I)"); });
+            purchaseMenu.DropDownItems.Add("Purchase Invoice (Ctrl+I)", null, delegate { OpenPurchaseEntry(); });
             purchaseMenu.DropDownItems.Add("New Product Master (Ctrl+N)", null, delegate { OpenNewProductModal(); });
 
             var orderMenu = new ToolStripMenuItem("&Order Management");

@@ -1,0 +1,690 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Forms;
+using PharmaAidPro.WinForms.Data;
+using PharmaAidPro.WinForms.Models;
+
+namespace PharmaAidPro.WinForms.Forms
+{
+    public class PurchaseEntryForm : Form
+    {
+        private readonly PharmaRepository _repo;
+        private readonly StoreSettings _settings;
+        private Supplier _selectedSupplier;
+
+        // Header controls
+        private TextBox _txtGrnDate;
+        private Label _lblPossibleGrn;
+        private TextBox _txtSupplierName;
+        private Label _lblSupplierCode;
+        private Label _lblSupplierAddr;
+        private Label _lblSupplierPhone;
+        private Label _lblSupplierGst;
+        private Label _lblOutstanding;
+        private TextBox _txtInvoiceNo;
+        private TextBox _txtInvoiceDate;
+        private TextBox _txtPaymentDate;
+        private TextBox _txtAmountPayable;
+        private TextBox _txtDiscountPct;
+        private TextBox _txtDiscountAmt;
+        private ComboBox _cmbSeries;
+        private TextBox _txtCoinAdj;
+
+        // Grid
+        private DataGridView _grid;
+
+        // Bottom tax & margin controls
+        private DataGridView _taxGrid;
+        private Label _lblTotalTaxSummary;
+        private Label _lblDiff;
+        private Label _lblItemCost;
+        private Label _lblCurMargin;
+        private Label _lblBatchStock;
+        private Label _lblTotalStock;
+        private Label _lblMrpTotal;
+        private Label _lblNetPayableSummary;
+
+        private bool _suppressCalc;
+
+        public event Action GrnSaved;
+
+        public PurchaseEntryForm(PharmaRepository repo)
+        {
+            _repo = repo;
+            _settings = _repo.GetStoreSettings();
+            InitializeComponent();
+            ResetForm();
+        }
+
+        private void InitializeComponent()
+        {
+            this.Text = "Purchase Entry - [Purchase Invoice]";
+            this.Size = new Size(1220, 680);
+            this.WindowState = FormWindowState.Maximized;
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.KeyPreview = true;
+            this.Font = new Font("Tahoma", 8.5F, FontStyle.Regular);
+            this.BackColor = Color.FromArgb(236, 240, 246);
+
+            // Top Header Panel
+            var headerPanel = new Panel { Dock = DockStyle.Top, Height = 165, BackColor = Color.FromArgb(238, 242, 248), Padding = new Padding(8) };
+
+            // Row 1: GRN Date & Possible GRN No
+            headerPanel.Controls.Add(new Label { Text = "GRN Date", Left = 10, Top = 10, Width = 72 });
+            _txtGrnDate = new TextBox { Left = 85, Top = 7, Width = 85 };
+            headerPanel.Controls.Add(_txtGrnDate);
+
+            headerPanel.Controls.Add(new Label { Text = "Possible GRN No", Left = 220, Top = 10, Width = 100 });
+            _lblPossibleGrn = new Label { Left = 325, Top = 9, Width = 70, Font = new Font("Tahoma", 10F, FontStyle.Bold), ForeColor = Color.DarkBlue };
+            headerPanel.Controls.Add(_lblPossibleGrn);
+
+            _lblSupplierGst = new Label { Left = 420, Top = 10, Width = 320, Font = new Font("Tahoma", 8.5F, FontStyle.Bold) };
+            headerPanel.Controls.Add(_lblSupplierGst);
+
+            // Left Supplier Box
+            headerPanel.Controls.Add(new Label { Text = "Supplier Name", Left = 10, Top = 38, Width = 85 });
+            _txtSupplierName = new TextBox { Left = 100, Top = 35, Width = 195, CharacterCasing = CharacterCasing.Upper };
+            _txtSupplierName.KeyDown += TxtSupplierName_KeyDown;
+            headerPanel.Controls.Add(_txtSupplierName);
+
+            headerPanel.Controls.Add(new Label { Text = "Code", Left = 10, Top = 64, Width = 60 });
+            _lblSupplierCode = new Label { Left = 100, Top = 64, Width = 100, Font = new Font("Tahoma", 8.5F, FontStyle.Bold) };
+            headerPanel.Controls.Add(_lblSupplierCode);
+
+            _lblSupplierAddr = new Label { Left = 10, Top = 88, Width = 285, Height = 32 };
+            headerPanel.Controls.Add(_lblSupplierAddr);
+
+            headerPanel.Controls.Add(new Label { Text = "Phone No", Left = 10, Top = 128, Width = 70 });
+            _lblSupplierPhone = new Label { Left = 100, Top = 128, Width = 180 };
+            headerPanel.Controls.Add(_lblSupplierPhone);
+
+            // Middle Invoice Details
+            _lblOutstanding = new Label { Left = 330, Top = 35, Width = 260, Height = 20, Font = new Font("Tahoma", 9.5F, FontStyle.Bold), ForeColor = Color.DarkRed };
+            headerPanel.Controls.Add(_lblOutstanding);
+
+            headerPanel.Controls.Add(new Label { Text = "Invoice No", Left = 330, Top = 64, Width = 95 });
+            _txtInvoiceNo = new TextBox { Left = 430, Top = 61, Width = 130, CharacterCasing = CharacterCasing.Upper };
+            headerPanel.Controls.Add(_txtInvoiceNo);
+
+            headerPanel.Controls.Add(new Label { Text = "Invoice Date", Left = 330, Top = 89, Width = 95 });
+            _txtInvoiceDate = new TextBox { Left = 430, Top = 86, Width = 130 };
+            headerPanel.Controls.Add(_txtInvoiceDate);
+
+            headerPanel.Controls.Add(new Label { Text = "Payment Date", Left = 330, Top = 114, Width = 95 });
+            _txtPaymentDate = new TextBox { Left = 430, Top = 111, Width = 130 };
+            headerPanel.Controls.Add(_txtPaymentDate);
+
+            headerPanel.Controls.Add(new Label { Text = "Amount Payable", Left = 330, Top = 139, Width = 95, Font = new Font("Tahoma", 8.5F, FontStyle.Bold) });
+            _txtAmountPayable = new TextBox { Left = 430, Top = 136, Width = 130, TextAlign = HorizontalAlignment.Right, Text = "0.00" };
+            _txtAmountPayable.TextChanged += delegate { RecalculateAll(); };
+            headerPanel.Controls.Add(_txtAmountPayable);
+
+            // Right Discount & Series
+            headerPanel.Controls.Add(new Label { Text = "Discount %", Left = 590, Top = 64, Width = 85 });
+            _txtDiscountPct = new TextBox { Left = 680, Top = 61, Width = 110, TextAlign = HorizontalAlignment.Right, Text = "0.0000" };
+            _txtDiscountPct.TextChanged += delegate
+            {
+                if (_suppressCalc) return;
+                _suppressCalc = true;
+                decimal gross = CalculateGross();
+                decimal pct = ParseDec(_txtDiscountPct.Text);
+                _txtDiscountAmt.Text = (gross * pct / 100m).ToString("0.00", CultureInfo.InvariantCulture);
+                _suppressCalc = false;
+                RecalculateAll();
+            };
+            headerPanel.Controls.Add(_txtDiscountPct);
+
+            headerPanel.Controls.Add(new Label { Text = "Discount Amt", Left = 590, Top = 89, Width = 85 });
+            _txtDiscountAmt = new TextBox { Left = 680, Top = 86, Width = 110, TextAlign = HorizontalAlignment.Right, Text = "0.00" };
+            _txtDiscountAmt.TextChanged += delegate
+            {
+                if (_suppressCalc) return;
+                _suppressCalc = true;
+                decimal gross = CalculateGross();
+                decimal amt = ParseDec(_txtDiscountAmt.Text);
+                _txtDiscountPct.Text = gross > 0 ? (amt * 100m / gross).ToString("0.0000", CultureInfo.InvariantCulture) : "0.0000";
+                _suppressCalc = false;
+                RecalculateAll();
+            };
+            headerPanel.Controls.Add(_txtDiscountAmt);
+
+            headerPanel.Controls.Add(new Label { Text = "Series", Left = 590, Top = 114, Width = 85 });
+            _cmbSeries = new ComboBox { Left = 680, Top = 111, Width = 140, DropDownStyle = ComboBoxStyle.DropDownList };
+            _cmbSeries.Items.AddRange(new object[] { "INVOICE CREDIT", "INVOICE CASH" });
+            _cmbSeries.SelectedIndex = 0;
+            headerPanel.Controls.Add(_cmbSeries);
+
+            headerPanel.Controls.Add(new Label { Text = "Coin Adj.", Left = 590, Top = 139, Width = 85 });
+            _txtCoinAdj = new TextBox { Left = 680, Top = 136, Width = 110, TextAlign = HorizontalAlignment.Right, Text = "0.00" };
+            _txtCoinAdj.TextChanged += delegate { RecalculateAll(); };
+            headerPanel.Controls.Add(_txtCoinAdj);
+
+            var btnNewProdTop = new Button
+            {
+                Text = "New Product (Ctrl+N)",
+                Left = 860,
+                Top = 34,
+                Width = 155,
+                Height = 30,
+                BackColor = Color.FromArgb(220, 232, 248)
+            };
+            btnNewProdTop.Click += delegate { OpenNewProductDialog(string.Empty); };
+            headerPanel.Controls.Add(btnNewProdTop);
+
+            // Grid
+            _grid = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = true,
+                AllowUserToDeleteRows = true,
+                BackgroundColor = Color.White,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EditMode = DataGridViewEditMode.EditOnEnter
+            };
+
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sno", HeaderText = "Sno", ReadOnly = true, FillWeight = 4 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "PCode", HeaderText = "PCode", ReadOnly = true, FillWeight = 7 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Product Name", FillWeight = 20 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Packing", HeaderText = "Packing", FillWeight = 6 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Qty", HeaderText = "Qty", FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "FreeQty", HeaderText = "Free Qty", FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DiscAmt", HeaderText = "Disc Amt", FillWeight = 7, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProdDisPct", HeaderText = "Prod Dis%", FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "BatchDesc", HeaderText = "Batch Desc", FillWeight = 10 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Expiry", HeaderText = "Expiry", FillWeight = 7 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Hsn", HeaderText = "HSN", FillWeight = 8 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TaxPct", HeaderText = "Tax%", FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "PPrice", HeaderText = "PPrice", FillWeight = 8, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SPrice", HeaderText = "SPrice", FillWeight = 8, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mrp", HeaderText = "MRP", FillWeight = 8, DefaultCellStyle = RightStyle() });
+
+            _grid.RowsAdded += delegate { RenumberRows(); };
+            _grid.CellEndEdit += Grid_CellEndEdit;
+            _grid.SelectionChanged += delegate { UpdateSelectedRowMarginPanel(); };
+            _grid.KeyDown += Grid_KeyDown;
+
+            // Bottom Panel
+            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 155, BackColor = Color.FromArgb(236, 240, 246), Padding = new Padding(8) };
+
+            _taxGrid = new DataGridView
+            {
+                Left = 10,
+                Top = 8,
+                Width = 480,
+                Height = 96,
+                ReadOnly = true,
+                AllowUserToAddRows = false,
+                RowHeadersVisible = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                BackgroundColor = Color.White
+            };
+            _taxGrid.Columns.Add("TaxSlab", "Tax %");
+            _taxGrid.Columns.Add("Gross", "Gross Amt");
+            _taxGrid.Columns.Add("SGST", "SGST");
+            _taxGrid.Columns.Add("CGST", "CGST");
+            _taxGrid.Columns.Add("Net", "Net");
+            bottomPanel.Controls.Add(_taxGrid);
+
+            _lblTotalTaxSummary = new Label { Left = 10, Top = 110, Width = 480, Height = 20, Font = new Font("Tahoma", 8.5F, FontStyle.Bold) };
+            bottomPanel.Controls.Add(_lblTotalTaxSummary);
+
+            // Middle Stock & Margin Info
+            _lblBatchStock = new Label { Left = 510, Top = 10, Width = 180, Text = "Batch Stock : 0" };
+            _lblTotalStock = new Label { Left = 510, Top = 32, Width = 180, Text = "Total Stock : 0" };
+            _lblItemCost = new Label { Left = 510, Top = 54, Width = 180, Text = "Item Cost : 0.00" };
+            _lblCurMargin = new Label { Left = 510, Top = 76, Width = 180, Text = "Cur.Margin : 0.00 %" };
+            bottomPanel.Controls.AddRange(new Control[] { _lblBatchStock, _lblTotalStock, _lblItemCost, _lblCurMargin });
+
+            // Right Totals & Process Buttons
+            _lblMrpTotal = new Label { Left = 720, Top = 10, Width = 250, Font = new Font("Tahoma", 9F, FontStyle.Bold), Text = "Mrp Total : 0.00" };
+            _lblNetPayableSummary = new Label { Left = 720, Top = 34, Width = 250, Font = new Font("Tahoma", 10F, FontStyle.Bold), ForeColor = Color.DarkBlue, Text = "Calculated Net : 0.00" };
+            _lblDiff = new Label { Left = 720, Top = 58, Width = 250, Font = new Font("Tahoma", 9.5F, FontStyle.Bold), ForeColor = Color.DarkRed, Text = "Diff : 0.00" };
+            bottomPanel.Controls.AddRange(new Control[] { _lblMrpTotal, _lblNetPayableSummary, _lblDiff });
+
+            var btnCancel = new Button { Text = "Cancel", Left = 720, Top = 96, Width = 105, Height = 34 };
+            btnCancel.Click += delegate { this.Close(); };
+
+            var btnProcess = new Button { Text = "Process - F1", Left = 835, Top = 96, Width = 135, Height = 34, BackColor = Color.FromArgb(210, 228, 250), Font = new Font("Tahoma", 9F, FontStyle.Bold) };
+            btnProcess.Click += delegate { ProcessAndSaveGrn(); };
+            bottomPanel.Controls.AddRange(new Control[] { btnCancel, btnProcess });
+
+            this.Controls.Add(_grid);
+            this.Controls.Add(bottomPanel);
+            this.Controls.Add(headerPanel);
+
+            // Enter navigation across header controls
+            AttachEnter(_txtGrnDate, _txtSupplierName);
+            AttachEnter(_txtInvoiceNo, _txtInvoiceDate);
+            AttachEnter(_txtInvoiceDate, _txtPaymentDate);
+            AttachEnter(_txtPaymentDate, _txtAmountPayable);
+            AttachEnter(_txtAmountPayable, _txtDiscountPct);
+            AttachEnter(_txtDiscountPct, _grid);
+
+            this.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.F1)
+                {
+                    e.Handled = true;
+                    ProcessAndSaveGrn();
+                }
+                else if (e.Control && e.KeyCode == Keys.N)
+                {
+                    e.Handled = true;
+                    OpenNewProductDialog(string.Empty);
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    this.Close();
+                }
+            };
+        }
+
+        private static DataGridViewCellStyle RightStyle()
+        {
+            return new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight };
+        }
+
+        private static void AttachEnter(Control current, Control next)
+        {
+            current.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    next.Focus();
+                }
+            };
+        }
+
+        private void ResetForm()
+        {
+            string today = DateTime.Now.ToString("dd/MM/yy");
+            _txtGrnDate.Text = today;
+            _txtInvoiceDate.Text = today;
+            _txtPaymentDate.Text = today;
+            _lblPossibleGrn.Text = _repo.GetNextGrnNumber().ToString();
+            _selectedSupplier = null;
+            _txtSupplierName.Text = string.Empty;
+            _lblSupplierCode.Text = string.Empty;
+            _lblSupplierAddr.Text = string.Empty;
+            _lblSupplierPhone.Text = string.Empty;
+            _lblSupplierGst.Text = string.Empty;
+            _lblOutstanding.Text = string.Empty;
+            _txtInvoiceNo.Text = string.Empty;
+            _txtAmountPayable.Text = "0.00";
+            _txtDiscountPct.Text = "0.0000";
+            _txtDiscountAmt.Text = "0.00";
+            _txtCoinAdj.Text = "0.00";
+            _grid.Rows.Clear();
+            RecalculateAll();
+        }
+
+        private void TxtSupplierName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Down)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                using (var dlg = new SupplierLookupForm(_repo, _txtSupplierName.Text))
+                {
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.SelectedSupplier != null)
+                    {
+                        _selectedSupplier = dlg.SelectedSupplier;
+                        _txtSupplierName.Text = _selectedSupplier.SupplierName;
+                        _lblSupplierCode.Text = _selectedSupplier.SupplierCode.ToString();
+                        _lblSupplierAddr.Text = _selectedSupplier.Address;
+                        _lblSupplierPhone.Text = _selectedSupplier.Phone;
+                        _lblSupplierGst.Text = string.Format("GST NO : {0}  {1}", _selectedSupplier.Gstin, _selectedSupplier.StateName);
+                        _lblOutstanding.Text = string.Format("Outstanding Rs {0:0.00}", _selectedSupplier.OutstandingAmount);
+                        _txtInvoiceNo.Focus();
+                    }
+                }
+            }
+        }
+
+        private void Grid_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (_grid.CurrentCell == null) return;
+            int colIdx = _grid.CurrentCell.ColumnIndex;
+            string colName = _grid.Columns[colIdx].Name;
+
+            if (colName == "ProductName" && e.KeyCode == Keys.F2)
+            {
+                e.Handled = true;
+                PickProductForRow(_grid.CurrentCell.RowIndex, Convert.ToString(_grid.CurrentCell.Value));
+            }
+            else if (colName == "BatchDesc" && e.KeyCode == Keys.F4)
+            {
+                e.Handled = true;
+                PickBatchForRow(_grid.CurrentCell.RowIndex);
+            }
+        }
+
+        private void Grid_CellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+            var row = _grid.Rows[e.RowIndex];
+            string colName = _grid.Columns[e.ColumnIndex].Name;
+
+            if (colName == "ProductName")
+            {
+                string typed = Convert.ToString(row.Cells["ProductName"].Value ?? string.Empty).Trim();
+                int existingCode = 0;
+                int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out existingCode);
+                if (!string.IsNullOrEmpty(typed) && existingCode == 0)
+                {
+                    PickProductForRow(e.RowIndex, typed);
+                }
+            }
+            else if (colName == "Mrp")
+            {
+                // Auto-sync SPrice = MRP if SPrice is 0
+                decimal mrp = ParseDec(row.Cells["Mrp"].Value);
+                decimal sprice = ParseDec(row.Cells["SPrice"].Value);
+                if (sprice <= 0 && mrp > 0)
+                {
+                    row.Cells["SPrice"].Value = mrp.ToString("0.00", CultureInfo.InvariantCulture);
+                }
+            }
+
+            RecalculateAll();
+            UpdateSelectedRowMarginPanel();
+        }
+
+        private void PickProductForRow(int rowIndex, string filter)
+        {
+            using (var dlg = new ProductLookupForm(_repo, filter))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.SelectedProduct != null)
+                {
+                    PopulateRowFromProduct(_grid.Rows[rowIndex], dlg.SelectedProduct);
+                    RecalculateAll();
+                    UpdateSelectedRowMarginPanel();
+                }
+            }
+        }
+
+        private void OpenNewProductDialog(string initialName)
+        {
+            using (var dlg = new NewProductForm(_repo, null, initialName))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.SavedProduct != null)
+                {
+                    int targetRow = _grid.CurrentRow != null ? _grid.CurrentRow.Index : _grid.Rows.Add();
+                    PopulateRowFromProduct(_grid.Rows[targetRow], dlg.SavedProduct);
+                    RecalculateAll();
+                }
+            }
+        }
+
+        private void PopulateRowFromProduct(DataGridViewRow row, Product p)
+        {
+            row.Cells["PCode"].Value = p.ProductCode;
+            row.Cells["ProductName"].Value = p.ProductName;
+            row.Cells["Packing"].Value = p.PurchaseUnit;
+            if (ParseDec(row.Cells["Qty"].Value) <= 0) row.Cells["Qty"].Value = "1";
+            if (row.Cells["FreeQty"].Value == null) row.Cells["FreeQty"].Value = "0";
+            if (row.Cells["DiscAmt"].Value == null) row.Cells["DiscAmt"].Value = "0.00";
+            if (row.Cells["ProdDisPct"].Value == null) row.Cells["ProdDisPct"].Value = "0";
+            row.Cells["Hsn"].Value = p.HsnCode;
+            row.Cells["TaxPct"].Value = p.TaxPercent.ToString("0.##", CultureInfo.InvariantCulture);
+            row.Cells["PPrice"].Value = p.PurchasePrice.ToString("0.00", CultureInfo.InvariantCulture);
+            row.Cells["SPrice"].Value = p.SalePrice.ToString("0.00", CultureInfo.InvariantCulture);
+            row.Cells["Mrp"].Value = p.Mrp.ToString("0.00", CultureInfo.InvariantCulture);
+        }
+
+        private void PickBatchForRow(int rowIndex)
+        {
+            var row = _grid.Rows[rowIndex];
+            int pcode;
+            if (!int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out pcode)) return;
+            var batches = _repo.GetBatchesForProduct(pcode);
+            if (batches.Count == 0) return;
+
+            using (var dlg = new BatchLookupForm(batches, Convert.ToString(row.Cells["ProductName"].Value)))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.SelectedBatch != null)
+                {
+                    row.Cells["BatchDesc"].Value = dlg.SelectedBatch.BatchDesc;
+                    row.Cells["Expiry"].Value = dlg.SelectedBatch.ExpiryMMYY;
+                    row.Cells["PPrice"].Value = dlg.SelectedBatch.PPrice.ToString("0.00", CultureInfo.InvariantCulture);
+                    row.Cells["SPrice"].Value = dlg.SelectedBatch.SPrice.ToString("0.00", CultureInfo.InvariantCulture);
+                    row.Cells["Mrp"].Value = dlg.SelectedBatch.Mrp.ToString("0.00", CultureInfo.InvariantCulture);
+                    RecalculateAll();
+                }
+            }
+        }
+
+        private void RenumberRows()
+        {
+            for (int i = 0; i < _grid.Rows.Count; i++)
+            {
+                if (!_grid.Rows[i].IsNewRow)
+                    _grid.Rows[i].Cells["Sno"].Value = i + 1;
+            }
+        }
+
+        private decimal CalculateGross()
+        {
+            decimal gross = 0m;
+            foreach (DataGridViewRow row in _grid.Rows)
+            {
+                if (row.IsNewRow) continue;
+                decimal qty = ParseDec(row.Cells["Qty"].Value);
+                decimal pprice = ParseDec(row.Cells["PPrice"].Value);
+                decimal discAmt = ParseDec(row.Cells["DiscAmt"].Value);
+                decimal prodDisPct = ParseDec(row.Cells["ProdDisPct"].Value);
+                decimal lineGross = (qty * pprice) - discAmt;
+                lineGross = lineGross * (1m - prodDisPct / 100m);
+                gross += lineGross;
+            }
+            return gross;
+        }
+
+        private void RecalculateAll()
+        {
+            decimal headerDisPct = ParseDec(_txtDiscountPct.Text);
+            decimal coinAdj = ParseDec(_txtCoinAdj.Text);
+            decimal amountPayable = ParseDec(_txtAmountPayable.Text);
+
+            var slabGross = new Dictionary<decimal, decimal>();
+            decimal totalGross = 0m;
+            decimal totalMrp = 0m;
+
+            foreach (DataGridViewRow row in _grid.Rows)
+            {
+                if (row.IsNewRow) continue;
+                decimal qty = ParseDec(row.Cells["Qty"].Value);
+                decimal freeQty = ParseDec(row.Cells["FreeQty"].Value);
+                decimal pprice = ParseDec(row.Cells["PPrice"].Value);
+                decimal mrp = ParseDec(row.Cells["Mrp"].Value);
+                decimal discAmt = ParseDec(row.Cells["DiscAmt"].Value);
+                decimal prodDisPct = ParseDec(row.Cells["ProdDisPct"].Value);
+                decimal taxPct = ParseDec(row.Cells["TaxPct"].Value);
+
+                decimal lineGross = ((qty * pprice) - discAmt) * (1m - prodDisPct / 100m);
+                decimal taxable = lineGross * (1m - headerDisPct / 100m);
+
+                totalGross += taxable;
+                totalMrp += (qty + freeQty) * mrp;
+
+                if (!slabGross.ContainsKey(taxPct)) slabGross[taxPct] = 0m;
+                slabGross[taxPct] += taxable;
+            }
+
+            _taxGrid.Rows.Clear();
+            decimal totalSgst = 0m, totalCgst = 0m;
+            foreach (var kv in slabGross.OrderBy(k => k.Key))
+            {
+                decimal sgst = Math.Round(kv.Value * (kv.Key / 200m), 2);
+                decimal cgst = Math.Round(kv.Value * (kv.Key / 200m), 2);
+                decimal net = kv.Value + sgst + cgst;
+                totalSgst += sgst;
+                totalCgst += cgst;
+                _taxGrid.Rows.Add(
+                    kv.Key.ToString("0.##") + "%",
+                    kv.Value.ToString("0.00"),
+                    sgst.ToString("0.00"),
+                    cgst.ToString("0.00"),
+                    net.ToString("0.00"));
+            }
+
+            decimal calcNet = Math.Round(totalGross + totalSgst + totalCgst + coinAdj, 2);
+            decimal diff = Math.Round(amountPayable - calcNet, 2);
+
+            _lblTotalTaxSummary.Text = string.Format("Gross: {0:0.00}   SGST: {1:0.00}   CGST: {2:0.00}", totalGross, totalSgst, totalCgst);
+            _lblMrpTotal.Text = string.Format("Mrp Total : {0:0.00}", totalMrp);
+            _lblNetPayableSummary.Text = string.Format("Calculated Net : {0:0.00}", calcNet);
+            _lblDiff.Text = string.Format("Diff : {0:0.00}", diff);
+            _lblDiff.ForeColor = Math.Abs(diff) <= 1.00m ? Color.DarkGreen : Color.DarkRed;
+        }
+
+        private void UpdateSelectedRowMarginPanel()
+        {
+            if (_grid.CurrentRow == null || _grid.CurrentRow.IsNewRow) return;
+            var row = _grid.CurrentRow;
+            int pcode;
+            if (int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out pcode) && pcode > 0)
+            {
+                var prod = _repo.GetProductByCode(pcode);
+                if (prod != null)
+                {
+                    _lblTotalStock.Text = string.Format("Total Stock : {0:0.##}", prod.TotalStockUnits);
+                }
+            }
+
+            decimal pprice = ParseDec(row.Cells["PPrice"].Value);
+            decimal mrp = ParseDec(row.Cells["Mrp"].Value);
+            decimal tax = ParseDec(row.Cells["TaxPct"].Value);
+            decimal cost = pprice * (1m + tax / 100m);
+            decimal marginPct = cost > 0 ? ((mrp - cost) / cost) * 100m : 0m;
+
+            _lblItemCost.Text = string.Format("Item Cost : {0:0.00}", cost);
+            _lblCurMargin.Text = string.Format("Cur.Margin : {0:0.00} %", marginPct);
+        }
+
+        private void ProcessAndSaveGrn()
+        {
+            if (_selectedSupplier == null)
+            {
+                MessageBox.Show("Please select a Supplier.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _txtSupplierName.Focus();
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(_txtInvoiceNo.Text))
+            {
+                MessageBox.Show("Please enter Supplier Invoice No.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _txtInvoiceNo.Focus();
+                return;
+            }
+
+            var lines = new List<PurchaseLine>();
+            int sno = 1;
+            foreach (DataGridViewRow row in _grid.Rows)
+            {
+                if (row.IsNewRow) continue;
+                int pcode;
+                if (!int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out pcode) || pcode <= 0) continue;
+
+                string batch = Convert.ToString(row.Cells["BatchDesc"].Value ?? string.Empty).Trim().ToUpperInvariant();
+                string exp = Convert.ToString(row.Cells["Expiry"].Value ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(batch) || string.IsNullOrEmpty(exp))
+                {
+                    MessageBox.Show("Batch Desc and Expiry (MM/YY) are required for row " + sno, "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                decimal pprice = ParseDec(row.Cells["PPrice"].Value);
+                decimal mrp = ParseDec(row.Cells["Mrp"].Value);
+                decimal sprice = ParseDec(row.Cells["SPrice"].Value);
+                if (sprice <= 0) sprice = mrp;
+                decimal tax = ParseDec(row.Cells["TaxPct"].Value);
+                decimal cost = pprice * (1m + tax / 100m);
+
+                lines.Add(new PurchaseLine
+                {
+                    Sno = sno++,
+                    ProductCode = pcode,
+                    ProductName = Convert.ToString(row.Cells["ProductName"].Value),
+                    Packing = Convert.ToString(row.Cells["Packing"].Value),
+                    QtyPacks = ParseDec(row.Cells["Qty"].Value),
+                    FreeQtyPacks = ParseDec(row.Cells["FreeQty"].Value),
+                    DiscountAmt = ParseDec(row.Cells["DiscAmt"].Value),
+                    ProdDisPercent = ParseDec(row.Cells["ProdDisPct"].Value),
+                    BatchDesc = batch,
+                    ExpiryMMYY = exp,
+                    HsnCode = Convert.ToString(row.Cells["Hsn"].Value),
+                    TaxPercent = tax,
+                    PPrice = pprice,
+                    SPrice = sprice,
+                    Mrp = mrp,
+                    ItemCost = Math.Round(cost, 2),
+                    MarginPercent = cost > 0 ? Math.Round(((mrp - cost) / cost) * 100m, 2) : 0m
+                });
+            }
+
+            if (lines.Count == 0)
+            {
+                MessageBox.Show("Please add at least one product line.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            decimal gross = 0m, sgst = 0m, cgst = 0m;
+            decimal headerDisPct = ParseDec(_txtDiscountPct.Text);
+            foreach (var l in lines)
+            {
+                decimal lineGross = ((l.QtyPacks * l.PPrice) - l.DiscountAmt) * (1m - l.ProdDisPercent / 100m);
+                decimal taxable = lineGross * (1m - headerDisPct / 100m);
+                gross += taxable;
+                sgst += Math.Round(taxable * (l.TaxPercent / 200m), 2);
+                cgst += Math.Round(taxable * (l.TaxPercent / 200m), 2);
+            }
+            decimal coinAdj = ParseDec(_txtCoinAdj.Text);
+            decimal net = Math.Round(gross + sgst + cgst + coinAdj, 2);
+
+            var header = new PurchaseHeader
+            {
+                GrnDate = _txtGrnDate.Text.Trim(),
+                SupplierCode = _selectedSupplier.SupplierCode,
+                SupplierName = _selectedSupplier.SupplierName,
+                InvoiceNo = _txtInvoiceNo.Text.Trim(),
+                InvoiceDate = _txtInvoiceDate.Text.Trim(),
+                PaymentDate = _txtPaymentDate.Text.Trim(),
+                Series = _cmbSeries.SelectedItem.ToString(),
+                AmountPayable = ParseDec(_txtAmountPayable.Text),
+                DiscountPercent = headerDisPct,
+                DiscountAmt = ParseDec(_txtDiscountAmt.Text),
+                CoinAdj = coinAdj,
+                GrossAmt = Math.Round(gross, 2),
+                SgstAmt = sgst,
+                CgstAmt = cgst,
+                NetAmt = net,
+                CreatedBy = _settings.DefaultUser
+            };
+
+            int grnNo = _repo.SavePurchaseGrn(header, lines);
+            if (GrnSaved != null) GrnSaved();
+
+            MessageBox.Show(
+                string.Format("Purchase Updated Successfully! GRN Number :{0}", grnNo),
+                "Shopaid.Net-RE",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            ResetForm();
+        }
+
+        private static decimal ParseDec(object val)
+        {
+            if (val == null) return 0m;
+            decimal d;
+            decimal.TryParse(Convert.ToString(val).Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out d);
+            return d;
+        }
+    }
+}

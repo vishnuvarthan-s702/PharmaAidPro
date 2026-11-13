@@ -180,5 +180,153 @@ namespace PharmaAidPro.WinForms.Data
                 }
             }
         }
+
+        public int GetNextGrnNumber()
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                var nextFromSettings = conn.ExecuteScalar<int>("SELECT NextGrnNumber FROM StoreSettings WHERE Id = 1");
+                var maxExisting = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(GrnNumber), 0) FROM PurchaseHeaders");
+                return nextFromSettings > maxExisting ? nextFromSettings : maxExisting + 1;
+            }
+        }
+
+        public static string ParseExpiryToSortKey(string mmyy)
+        {
+            if (string.IsNullOrWhiteSpace(mmyy)) return "2099-12";
+            var parts = mmyy.Trim().Split('/');
+            if (parts.Length == 2)
+            {
+                int mm, yy;
+                if (int.TryParse(parts[0], out mm) && int.TryParse(parts[1], out yy))
+                {
+                    int yyyy = yy < 100 ? 2000 + yy : yy;
+                    return string.Format("{0:0000}-{1:00}", yyyy, mm);
+                }
+            }
+            return "2099-12";
+        }
+
+        public int SavePurchaseGrn(PurchaseHeader header, List<PurchaseLine> lines)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            using (var tx = conn.BeginTransaction())
+            {
+                var nextFromSettings = conn.ExecuteScalar<int>("SELECT NextGrnNumber FROM StoreSettings WHERE Id = 1", transaction: tx);
+                var maxExisting = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(GrnNumber), 0) FROM PurchaseHeaders", transaction: tx);
+                int grnNo = nextFromSettings > maxExisting ? nextFromSettings : maxExisting + 1;
+                header.GrnNumber = grnNo;
+
+                conn.Execute(@"
+                    INSERT INTO PurchaseHeaders (
+                        GrnNumber, GrnDate, SupplierCode, SupplierName, InvoiceNo, InvoiceDate, PaymentDate,
+                        Series, AmountPayable, DiscountPercent, DiscountAmt, OtherCrDt, CoinAdj,
+                        GrossAmt, SgstAmt, CgstAmt, NetAmt, CreatedBy
+                    ) VALUES (
+                        @GrnNumber, @GrnDate, @SupplierCode, @SupplierName, @InvoiceNo, @InvoiceDate, @PaymentDate,
+                        @Series, @AmountPayable, @DiscountPercent, @DiscountAmt, @OtherCrDt, @CoinAdj,
+                        @GrossAmt, @SgstAmt, @CgstAmt, @NetAmt, @CreatedBy
+                    );", header, tx);
+
+                foreach (var line in lines)
+                {
+                    line.GrnNumber = grnNo;
+                    conn.Execute(@"
+                        INSERT INTO PurchaseLines (
+                            GrnNumber, Sno, ProductCode, ProductName, Packing, QtyPacks, FreeQtyPacks,
+                            DiscountAmt, ProdDisPercent, BatchDesc, ExpiryMMYY, HsnCode, TaxPercent,
+                            PPrice, SPrice, Mrp, ItemCost, MarginPercent
+                        ) VALUES (
+                            @GrnNumber, @Sno, @ProductCode, @ProductName, @Packing, @QtyPacks, @FreeQtyPacks,
+                            @DiscountAmt, @ProdDisPercent, @BatchDesc, @ExpiryMMYY, @HsnCode, @TaxPercent,
+                            @PPrice, @SPrice, @Mrp, @ItemCost, @MarginPercent
+                        );", line, tx);
+
+                    var prod = conn.QuerySingle<Product>("SELECT * FROM Products WHERE ProductCode = @ProductCode", new { line.ProductCode }, tx);
+                    decimal addedBaseUnits = (line.QtyPacks + line.FreeQtyPacks) * (prod.PurchaseUnit > 0 ? prod.PurchaseUnit : 1);
+                    string sortKey = ParseExpiryToSortKey(line.ExpiryMMYY);
+                    string today = System.DateTime.Now.ToString("yyyy-MM-dd");
+
+                    var existingBatch = conn.QuerySingleOrDefault<ProductBatch>(@"
+                        SELECT * FROM ProductBatches WHERE ProductCode = @ProductCode AND BatchDesc = @BatchDesc",
+                        new { line.ProductCode, line.BatchDesc }, tx);
+
+                    if (existingBatch != null)
+                    {
+                        conn.Execute(@"
+                            UPDATE ProductBatches SET
+                                ExpiryMMYY = @ExpiryMMYY,
+                                ExpirySortKey = @ExpirySortKey,
+                                PPrice = @PPrice,
+                                SPrice = @SPrice,
+                                Mrp = @Mrp,
+                                StockBaseUnits = StockBaseUnits + @AddedUnits,
+                                LastUpdated = @LastUpdated
+                            WHERE BatchId = @BatchId;", new
+                        {
+                            line.ExpiryMMYY,
+                            ExpirySortKey = sortKey,
+                            line.PPrice,
+                            line.SPrice,
+                            line.Mrp,
+                            AddedUnits = addedBaseUnits,
+                            LastUpdated = today,
+                            existingBatch.BatchId
+                        }, tx);
+                    }
+                    else
+                    {
+                        conn.Execute(@"
+                            INSERT INTO ProductBatches (
+                                ProductCode, BatchDesc, ExpiryMMYY, ExpirySortKey,
+                                PPrice, SPrice, Mrp, StockBaseUnits, Location, LastUpdated
+                            ) VALUES (
+                                @ProductCode, @BatchDesc, @ExpiryMMYY, @ExpirySortKey,
+                                @PPrice, @SPrice, @Mrp, @StockBaseUnits, 'STORE', @LastUpdated
+                            );", new
+                        {
+                            line.ProductCode,
+                            line.BatchDesc,
+                            line.ExpiryMMYY,
+                            ExpirySortKey = sortKey,
+                            line.PPrice,
+                            line.SPrice,
+                            line.Mrp,
+                            StockBaseUnits = addedBaseUnits,
+                            LastUpdated = today
+                        }, tx);
+                    }
+
+                    conn.Execute(@"
+                        UPDATE Products SET
+                            PurchasePrice = @PPrice,
+                            SalePrice = @SPrice,
+                            Mrp = @Mrp,
+                            HsnCode = CASE WHEN @HsnCode <> '' THEN @HsnCode ELSE HsnCode END,
+                            TaxPercent = @TaxPercent
+                        WHERE ProductCode = @ProductCode;", new
+                    {
+                        line.PPrice,
+                        line.SPrice,
+                        line.Mrp,
+                        HsnCode = line.HsnCode ?? string.Empty,
+                        line.TaxPercent,
+                        line.ProductCode
+                    }, tx);
+                }
+
+                if (header.Series == "INVOICE CREDIT")
+                {
+                    conn.Execute(@"
+                        UPDATE Suppliers SET OutstandingAmount = OutstandingAmount + @NetAmt
+                        WHERE SupplierCode = @SupplierCode;", new { header.NetAmt, header.SupplierCode }, tx);
+                }
+
+                conn.Execute("UPDATE StoreSettings SET NextGrnNumber = @NextGrn WHERE Id = 1;", new { NextGrn = grnNo + 1 }, tx);
+
+                tx.Commit();
+                return grnNo;
+            }
+        }
     }
 }
