@@ -129,9 +129,9 @@ namespace PharmaAidPro.WinForms.Forms
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Particulars (Product Name)", FillWeight = 27 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Qty", HeaderText = "Qty (Units)", FillWeight = 8, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "BatchDesc", HeaderText = "Batch No (F4)", FillWeight = 11 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Expiry", HeaderText = "Exp", ReadOnly = true, FillWeight = 7 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Expiry", HeaderText = "Exp", FillWeight = 7 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Rate", HeaderText = "Rate (MRP)", FillWeight = 9, DefaultCellStyle = RightStyle() });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SaleUnit", HeaderText = "Pack", ReadOnly = true, FillWeight = 6, DefaultCellStyle = RightStyle() });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "SaleUnit", HeaderText = "Pack", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DisPct", HeaderText = "Dis%", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "TaxPct", HeaderText = "GST%", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Amount", HeaderText = "Amount", ReadOnly = true, FillWeight = 10, DefaultCellStyle = RightStyle() });
@@ -366,6 +366,15 @@ namespace PharmaAidPro.WinForms.Forms
                         }
                     }
                 }
+            }
+            else if (_grid.Columns[e.ColumnIndex].Name == "Expiry")
+            {
+                string expRaw = Convert.ToString(row.Cells["Expiry"].Value ?? string.Empty).Trim().Replace("-", "/");
+                if (expRaw.Length == 4 && !expRaw.Contains("/"))
+                {
+                    expRaw = expRaw.Substring(0, 2) + "/" + expRaw.Substring(2, 2);
+                }
+                row.Cells["Expiry"].Value = expRaw;
             }
 
             RecalculateRow(row);
