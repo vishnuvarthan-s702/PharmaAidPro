@@ -46,6 +46,47 @@ namespace PharmaAidPro.WinForms.Forms
                 _statusClockLabel.Text = DateTime.Now.ToString("dd/MM/yy  hh:mm:ss tt");
             };
             _clockTimer.Start();
+
+            this.KeyDown += MainForm_KeyDown;
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.N)
+            {
+                e.Handled = true;
+                OpenNewProductModal();
+            }
+        }
+
+        private void OpenNewProductModal()
+        {
+            using (var dlg = new NewProductForm(_repo))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    UpdateStatusBar();
+                    MessageBox.Show(
+                        string.Format("Product Saved: {0} ({1})", dlg.SavedProduct.ProductName, dlg.SavedProduct.ProductCode),
+                        "NewProduct",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+        }
+
+        private void OpenProductMaster()
+        {
+            var frm = new ProductMasterForm(_repo);
+            frm.DataChanged += UpdateStatusBar;
+            frm.ShowDialog(this);
+        }
+
+        private void OpenSupplierMaster()
+        {
+            var frm = new SupplierMasterForm(_repo);
+            frm.DataChanged += UpdateStatusBar;
+            frm.ShowDialog(this);
         }
 
         private void BuildMenuStrip()
@@ -66,13 +107,13 @@ namespace PharmaAidPro.WinForms.Forms
 
             var purchaseMenu = new ToolStripMenuItem("&Purchase");
             purchaseMenu.DropDownItems.Add("Purchase Invoice (Ctrl+I)", null, delegate { ShowComingSoon("Purchase Invoice (Ctrl+I)"); });
-            purchaseMenu.DropDownItems.Add("New Product Master (Ctrl+N)", null, delegate { ShowComingSoon("New Product (9-Field)"); });
+            purchaseMenu.DropDownItems.Add("New Product Master (Ctrl+N)", null, delegate { OpenNewProductModal(); });
 
             var orderMenu = new ToolStripMenuItem("&Order Management");
             var accountsMenu = new ToolStripMenuItem("&Accounts");
             var inventoryMenu = new ToolStripMenuItem("&Inventory");
-            inventoryMenu.DropDownItems.Add("Product & Stock Master", null, delegate { ShowComingSoon("Product & Stock Master"); });
-            inventoryMenu.DropDownItems.Add("Supplier Master", null, delegate { ShowComingSoon("Supplier Master"); });
+            inventoryMenu.DropDownItems.Add("Product & Stock Master", null, delegate { OpenProductMaster(); });
+            inventoryMenu.DropDownItems.Add("Supplier Master", null, delegate { OpenSupplierMaster(); });
 
             var reportsMenu = new ToolStripMenuItem("&Reports");
             var maintenanceMenu = new ToolStripMenuItem("&Maintenance");
