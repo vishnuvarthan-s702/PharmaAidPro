@@ -15,6 +15,24 @@ namespace PharmaAidPro.WinForms.Data
             }
         }
 
+        public List<AppUser> GetActiveUsers()
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                return conn.Query<AppUser>("SELECT * FROM Users WHERE IsActive = 1 ORDER BY UserId").ToList();
+            }
+        }
+
+        public AppUser ValidateUser(string userName, string password)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                return conn.QueryFirstOrDefault<AppUser>(
+                    "SELECT * FROM Users WHERE LOWER(UserName) = LOWER(@UserName) AND LOWER(Password) = LOWER(@Password) AND IsActive = 1",
+                    new { UserName = (userName ?? string.Empty).Trim(), Password = (password ?? string.Empty).Trim() });
+            }
+        }
+
         public int GetNextProductCode()
         {
             using (var conn = DatabaseInitializer.CreateConnection())

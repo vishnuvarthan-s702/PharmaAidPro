@@ -17,14 +17,54 @@ namespace PharmaAidPro.WinForms.Forms
         private ToolStripStatusLabel _statusDbLabel;
         private ToolStripStatusLabel _statusClockLabel;
         private Timer _clockTimer;
+        private readonly string _loggedInUser;
+        private readonly string _finYear;
+        private Image _mdiBgImage;
 
-        public MainForm()
+        public bool LogoutRequested { get; private set; }
+
+        public MainForm() : this("Admin", "2026 - 2027")
+        {
+        }
+
+        public MainForm(string loggedInUser, string finYear)
         {
             _repo = new PharmaRepository();
             _settings = _repo.GetStoreSettings();
+            _loggedInUser = string.IsNullOrEmpty(loggedInUser) ? _settings.DefaultUser : loggedInUser;
+            _finYear = string.IsNullOrEmpty(finYear) ? "2026 - 2027" : finYear;
 
             InitializeComponent();
+            ApplyMdiStoreBackground();
             UpdateStatusBar();
+        }
+
+        private void ApplyMdiStoreBackground()
+        {
+            try
+            {
+                string bgPath = LoadingSplashForm.ResolveStoreBackgroundPath();
+                if (!string.IsNullOrEmpty(bgPath) && System.IO.File.Exists(bgPath))
+                {
+                    using (var fs = new System.IO.FileStream(bgPath, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
+                    {
+                        _mdiBgImage = Image.FromStream(fs);
+                    }
+                    foreach (Control ctl in this.Controls)
+                    {
+                        var mdi = ctl as MdiClient;
+                        if (mdi != null)
+                        {
+                            mdi.BackgroundImage = _mdiBgImage;
+                            mdi.BackgroundImageLayout = ImageLayout.Stretch;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
         }
 
         private void InitializeComponent()
@@ -153,6 +193,11 @@ namespace PharmaAidPro.WinForms.Forms
             fileMenu.DropDownItems.Add("Store Settings && Printer", null, delegate { OpenSettingsAndBackup(); });
             fileMenu.DropDownItems.Add("Backup Database && Import CSV", null, delegate { OpenSettingsAndBackup(); });
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
+            fileMenu.DropDownItems.Add("&Logout / Switch User", null, delegate
+            {
+                LogoutRequested = true;
+                this.Close();
+            });
             fileMenu.DropDownItems.Add("E&xit", null, delegate { this.Close(); });
 
             var salesMenu = new ToolStripMenuItem("&Sales");
@@ -215,7 +260,7 @@ namespace PharmaAidPro.WinForms.Forms
             {
                 BorderSides = ToolStripStatusLabelBorderSides.Left,
                 Padding = new Padding(8, 0, 8, 0),
-                Text = string.Format("{0} | {1}:{2}", _settings.LicenseRef, _settings.DefaultUser, 1)
+                Text = string.Format("{0} | User: {1} | FY: {2}", _settings.LicenseRef, _loggedInUser, _finYear)
             };
 
             _statusClockLabel = new ToolStripStatusLabel

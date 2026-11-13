@@ -206,6 +206,14 @@ namespace PharmaAidPro.WinForms.Data
                     FOREIGN KEY (ProductCode) REFERENCES Products(ProductCode)
                 );
 
+                CREATE TABLE IF NOT EXISTS Users (
+                    UserId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    UserName TEXT NOT NULL UNIQUE,
+                    Password TEXT NOT NULL,
+                    Role TEXT NOT NULL DEFAULT 'Admin',
+                    IsActive INTEGER NOT NULL DEFAULT 1
+                );
+
                 CREATE INDEX IF NOT EXISTS IX_Products_Name ON Products(ProductName);
                 CREATE INDEX IF NOT EXISTS IX_Batches_ProdExp ON ProductBatches(ProductCode, ExpirySortKey);
                 CREATE INDEX IF NOT EXISTS IX_Sales_Date ON SalesHeaders(BillDate);
@@ -225,7 +233,7 @@ namespace PharmaAidPro.WinForms.Data
                         PrinterName, BackupDirectory
                     ) VALUES (
                         1,
-                        'THE NETAJI MEDICAL STORE',
+                        'The Nethaji Medical Stores',
                         'No.204/A,Meenakshipuram,Nagercoil-629001',
                         'TNK/351/20,21, TNK/417/20',
                         '33CREPS6130A1Z8',
@@ -238,6 +246,19 @@ namespace PharmaAidPro.WinForms.Data
                         '',
                         ''
                     );
+                ");
+            }
+            else
+            {
+                conn.Execute("UPDATE StoreSettings SET StoreName = 'The Nethaji Medical Stores' WHERE StoreName LIKE '%NETAJI%';");
+            }
+
+            if (conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Users") == 0)
+            {
+                conn.Execute(@"
+                    INSERT INTO Users (UserName, Password, Role, IsActive) VALUES
+                    ('Admin', 'SHOPAID', 'Administrator', 1),
+                    ('Counter1', '1234', 'Cashier', 1);
                 ");
             }
 

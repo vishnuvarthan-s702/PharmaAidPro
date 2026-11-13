@@ -165,4 +165,13 @@ namespace PharmaAidPro.WinForms.Models
         public decimal TaxPercent { get; set; }
         public decimal LineAmount { get; set; }
     }
+
+    public class AppUser
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; }
+        public string Password { get; set; }
+        public string Role { get; set; }
+        public int IsActive { get; set; }
+    }
 }

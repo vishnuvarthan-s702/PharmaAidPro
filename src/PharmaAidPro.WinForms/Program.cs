@@ -19,13 +19,45 @@ namespace PharmaAidPro.WinForms
             {
                 var repo = new PharmaRepository();
                 var settings = repo.GetStoreSettings();
+                var admin = repo.ValidateUser("Admin", "SHOPAID");
                 int p, b, s;
                 repo.GetDatabaseCounts(out p, out b, out s);
-                Console.WriteLine("DB_OK|" + settings.StoreName + "|" + p + "|" + b + "|" + s);
+                Console.WriteLine("DB_OK|" + settings.StoreName + "|" + (admin != null ? admin.UserName : "NO_USER") + "|" + p + "|" + b + "|" + s);
                 return;
             }
 
-            Application.Run(new MainForm());
+            var repository = new PharmaRepository();
+            while (true)
+            {
+                string userName;
+                string location;
+                string finYear;
+
+                using (var loginForm = new LoginForm(repository))
+                {
+                    if (loginForm.ShowDialog() != DialogResult.OK)
+                    {
+                        break;
+                    }
+                    userName = loginForm.LoggedInUser;
+                    location = loginForm.SelectedLocation;
+                    finYear = loginForm.SelectedFinYear;
+                }
+
+                using (var splash = new LoadingSplashForm(userName, location, finYear))
+                {
+                    splash.ShowDialog();
+                }
+
+                using (var mainForm = new MainForm(userName, finYear))
+                {
+                    Application.Run(mainForm);
+                    if (!mainForm.LogoutRequested)
+                    {
+                        break;
+                    }
+                }
+            }
         }
     }
 }

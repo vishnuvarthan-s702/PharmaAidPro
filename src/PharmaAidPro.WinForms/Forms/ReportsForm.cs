@@ -135,7 +135,7 @@ namespace PharmaAidPro.WinForms.Forms
 
             var sb = new StringBuilder();
             sb.AppendLine("==========================================================");
-            sb.AppendLine("              THE NETAJI MEDICAL STORE - GST SUMMARY");
+            sb.AppendLine("            The Nethaji Medical Stores - GST SUMMARY");
             sb.AppendLine("==========================================================");
             sb.AppendLine();
             sb.AppendLine(string.Format("OUTPUT TAX (RETAIL SALES - {0} Bills)", sales.Count));

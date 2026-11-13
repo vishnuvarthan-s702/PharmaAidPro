@@ -1,6 +1,6 @@
 # PharmaAid Pro — System Architecture & Implementation Plan
 
-> **Purpose:** 1:1 offline desktop replacement for **Wondersoft Shopaid.Net-RE (v7.5.16)** at **The Netaji Medical Store**, built specifically for the store's 32-bit Windows 7 workstation and TVS MSP dot-matrix printer.
+> **Purpose:** 1:1 offline desktop replacement for **Wondersoft Shopaid.Net-RE (v7.5.16)** at **The Nethaji Medical Stores**, built specifically for the store's 32-bit Windows 7 workstation and TVS MSP dot-matrix printer.
 
 ---
 
@@ -20,7 +20,7 @@
 
 ## 2. Store Profile & Numbering Series
 
-* **Store Name:** `THE NETAJI MEDICAL STORE`
+* **Store Name:** `The Nethaji Medical Stores`
 * **Address:** `No.204/A, Meenakshipuram, Nagercoil-629001`
 * **Drug License:** `DLNo : TNK/351/20,21, TNK/417/20`
 * **GSTIN:** `33CREPS6130A1Z8` (State Code `33` — Tamil Nadu)
@@ -163,5 +163,7 @@ Includes an on-screen **Print Preview / A4 PDF fallback** when testing without t
    * Build Retail Sales Billing (`C01xxxxxx`), FIFO batch selection, loose-unit pricing, GST back-calculation, and Raw ESC/P dot-matrix printing + preview.
 5. **Phase 5 — Reports, Backup Utility & Legacy Data Importer**
    * Add Sales/Purchase registers, Stock & Near-Expiry alerts, GST summary exports, automatic local/USB backup, and legacy data import tool.
+6. **Phase 6 — Login Page UI (`LoginForm.cs`) & Store Background Loading Screen (`LoadingSplashForm.cs`)**
+   * Startup `LoginForm` (`Admin` / `SHOPAID`) followed by a full-background store photo loading splash screen (`Assets/store_bg.jpg`) for **The Nethaji Medical Stores**, plus MDI background branding and Logout / Switch User support.
 
 * **Git Discipline:** Every completed milestone and update is committed and pushed directly to [`https://github.com/vishnuvarthan-s702/PharmaAidPro`](https://github.com/vishnuvarthan-s702/PharmaAidPro).
