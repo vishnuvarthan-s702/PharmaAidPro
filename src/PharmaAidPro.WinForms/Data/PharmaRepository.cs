@@ -42,7 +42,9 @@ namespace PharmaAidPro.WinForms.Data
                     SELECT p.*,
                            COALESCE((SELECT SUM(b.StockBaseUnits) FROM ProductBatches b WHERE b.ProductCode = p.ProductCode), 0) AS TotalStockUnits
                     FROM Products p
-                    WHERE p.ProductName LIKE @Like OR CAST(p.ProductCode AS TEXT) LIKE @Like
+                    WHERE p.ProductName LIKE @Like
+                       OR CAST(p.ProductCode AS TEXT) LIKE @Like
+                       OR COALESCE(p.Salt, '') LIKE @Like
                     ORDER BY p.ProductName
                     LIMIT 50", new { Like = like }).ToList();
             }

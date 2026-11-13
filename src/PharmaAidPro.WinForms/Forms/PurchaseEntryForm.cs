@@ -49,6 +49,12 @@ namespace PharmaAidPro.WinForms.Forms
 
         private bool _suppressCalc;
 
+        private InlineSuggestPanel<Product> _productDropdown;
+        private InlineSuggestPanel<Supplier> _supplierDropdown;
+        private TextBox _activeProductTextBox;
+        private int _activeEditRowIndex = -1;
+        private bool _suppressSuggest;
+
         public event Action GrnSaved;
 
         public PurchaseEntryForm(PharmaRepository repo)
@@ -87,6 +93,7 @@ namespace PharmaAidPro.WinForms.Forms
             // Left Supplier Box
             headerPanel.Controls.Add(new Label { Text = "Supplier Name", Left = 10, Top = 38, Width = 85 });
             _txtSupplierName = new TextBox { Left = 100, Top = 35, Width = 195, CharacterCasing = CharacterCasing.Upper };
+            _txtSupplierName.TextChanged += TxtSupplierName_TextChanged;
             _txtSupplierName.KeyDown += TxtSupplierName_KeyDown;
             headerPanel.Controls.Add(_txtSupplierName);
 
@@ -203,9 +210,26 @@ namespace PharmaAidPro.WinForms.Forms
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mrp", HeaderText = "MRP", FillWeight = 8, DefaultCellStyle = RightStyle() });
 
             _grid.RowsAdded += delegate { RenumberRows(); };
+            _grid.EditingControlShowing += Grid_EditingControlShowing;
             _grid.CellEndEdit += Grid_CellEndEdit;
             _grid.SelectionChanged += delegate { UpdateSelectedRowMarginPanel(); };
             _grid.KeyDown += Grid_KeyDown;
+
+            _productDropdown = new InlineSuggestPanel<Product>(
+                "Up/Down: Navigate  |  Enter: Select Product  |  Ctrl+N: New Product  |  Esc: Close",
+                new DataGridViewTextBoxColumn { DataPropertyName = "ProductCode", HeaderText = "P_code", FillWeight = 13 },
+                new DataGridViewTextBoxColumn { DataPropertyName = "ProductName", HeaderText = "Product Name", FillWeight = 44 },
+                new DataGridViewTextBoxColumn { DataPropertyName = "TotalStockUnits", HeaderText = "Stock", FillWeight = 14, DefaultCellStyle = new DataGridViewCellStyle { Format = "0.##", Alignment = DataGridViewContentAlignment.MiddleRight } },
+                new DataGridViewTextBoxColumn { DataPropertyName = "PurchaseUnit", HeaderText = "Pack", FillWeight = 11, DefaultCellStyle = new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight } },
+                new DataGridViewTextBoxColumn { DataPropertyName = "Mrp", HeaderText = "MRP", FillWeight = 18, DefaultCellStyle = new DataGridViewCellStyle { Format = "0.00", Alignment = DataGridViewContentAlignment.MiddleRight } });
+            _productDropdown.ItemChosen += ProductDropdown_ItemChosen;
+
+            _supplierDropdown = new InlineSuggestPanel<Supplier>(
+                "Up/Down: Navigate  |  Enter: Select Supplier  |  Esc: Close",
+                new DataGridViewTextBoxColumn { DataPropertyName = "SupplierCode", HeaderText = "Code", FillWeight = 16 },
+                new DataGridViewTextBoxColumn { DataPropertyName = "SupplierName", HeaderText = "Supplier Name", FillWeight = 52 },
+                new DataGridViewTextBoxColumn { DataPropertyName = "Gstin", HeaderText = "GSTIN", FillWeight = 32 });
+            _supplierDropdown.ItemChosen += SupplierDropdown_ItemChosen;
 
             // Bottom Panel
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 155, BackColor = Color.FromArgb(236, 240, 246), Padding = new Padding(8) };
@@ -255,6 +279,8 @@ namespace PharmaAidPro.WinForms.Forms
             this.Controls.Add(_grid);
             this.Controls.Add(bottomPanel);
             this.Controls.Add(headerPanel);
+            this.Controls.Add(_productDropdown);
+            this.Controls.Add(_supplierDropdown);
 
             // Enter navigation across header controls
             AttachEnter(_txtGrnDate, _txtSupplierName);
@@ -324,9 +350,50 @@ namespace PharmaAidPro.WinForms.Forms
             RecalculateAll();
         }
 
+        private void TxtSupplierName_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressSuggest) return;
+            string q = _txtSupplierName.Text.Trim();
+            if (string.IsNullOrEmpty(q))
+            {
+                _supplierDropdown.HidePopup();
+                return;
+            }
+            var screenPt = _txtSupplierName.Parent.PointToScreen(new Point(_txtSupplierName.Left, _txtSupplierName.Bottom + 2));
+            var hostPt = this.PointToClient(screenPt);
+            _supplierDropdown.ShowAt(this, hostPt, _repo.SearchSuppliers(q));
+        }
+
+        private void SupplierDropdown_ItemChosen(Supplier supplier)
+        {
+            ApplySelectedSupplier(supplier);
+            _txtInvoiceNo.Focus();
+        }
+
+        private void ApplySelectedSupplier(Supplier supplier)
+        {
+            _suppressSuggest = true;
+            _selectedSupplier = supplier;
+            _txtSupplierName.Text = _selectedSupplier.SupplierName;
+            _lblSupplierCode.Text = _selectedSupplier.SupplierCode.ToString();
+            _lblSupplierAddr.Text = _selectedSupplier.Address;
+            _lblSupplierPhone.Text = _selectedSupplier.Phone;
+            _lblSupplierGst.Text = string.Format("GST NO : {0}  {1}", _selectedSupplier.Gstin, _selectedSupplier.StateName);
+            _lblOutstanding.Text = string.Format("Outstanding Rs {0:0.00}", _selectedSupplier.OutstandingAmount);
+            _suppressSuggest = false;
+        }
+
         private void TxtSupplierName_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Down)
+            if (e.KeyCode == Keys.Down && !_supplierDropdown.Visible)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                var screenPt = _txtSupplierName.Parent.PointToScreen(new Point(_txtSupplierName.Left, _txtSupplierName.Bottom + 2));
+                var hostPt = this.PointToClient(screenPt);
+                _supplierDropdown.ShowAt(this, hostPt, _repo.SearchSuppliers(_txtSupplierName.Text));
+            }
+            else if (e.KeyCode == Keys.F2)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
@@ -334,17 +401,98 @@ namespace PharmaAidPro.WinForms.Forms
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.SelectedSupplier != null)
                     {
-                        _selectedSupplier = dlg.SelectedSupplier;
-                        _txtSupplierName.Text = _selectedSupplier.SupplierName;
-                        _lblSupplierCode.Text = _selectedSupplier.SupplierCode.ToString();
-                        _lblSupplierAddr.Text = _selectedSupplier.Address;
-                        _lblSupplierPhone.Text = _selectedSupplier.Phone;
-                        _lblSupplierGst.Text = string.Format("GST NO : {0}  {1}", _selectedSupplier.Gstin, _selectedSupplier.StateName);
-                        _lblOutstanding.Text = string.Format("Outstanding Rs {0:0.00}", _selectedSupplier.OutstandingAmount);
+                        ApplySelectedSupplier(dlg.SelectedSupplier);
                         _txtInvoiceNo.Focus();
                     }
                 }
             }
+        }
+
+        private void Grid_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            if (_activeProductTextBox != null)
+            {
+                _activeProductTextBox.TextChanged -= ActiveProductTextBox_TextChanged;
+                _activeProductTextBox = null;
+            }
+
+            if (_grid.CurrentCell != null && _grid.Columns[_grid.CurrentCell.ColumnIndex].Name == "ProductName")
+            {
+                var tb = e.Control as TextBox;
+                if (tb != null)
+                {
+                    _activeProductTextBox = tb;
+                    _activeEditRowIndex = _grid.CurrentCell.RowIndex;
+                    _activeProductTextBox.TextChanged += ActiveProductTextBox_TextChanged;
+                }
+            }
+            else
+            {
+                _productDropdown.HidePopup();
+            }
+        }
+
+        private void ActiveProductTextBox_TextChanged(object sender, EventArgs e)
+        {
+            if (_suppressSuggest || _activeProductTextBox == null || _activeEditRowIndex < 0) return;
+            string query = _activeProductTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(query))
+            {
+                _productDropdown.HidePopup();
+                return;
+            }
+            ShowProductDropdownBelowCell(_activeEditRowIndex, query);
+        }
+
+        private void ShowProductDropdownBelowCell(int rowIndex, string query)
+        {
+            var colIdx = _grid.Columns["ProductName"].Index;
+            var rect = _grid.GetCellDisplayRectangle(colIdx, rowIndex, true);
+            var screenPt = _grid.PointToScreen(new Point(rect.Left, rect.Bottom));
+            var hostPt = this.PointToClient(screenPt);
+            _productDropdown.ShowAt(this, hostPt, _repo.SearchProducts(query));
+        }
+
+        private void ProductDropdown_ItemChosen(Product prod)
+        {
+            int targetRow = _activeEditRowIndex >= 0 && _activeEditRowIndex < _grid.Rows.Count
+                ? _activeEditRowIndex
+                : (_grid.CurrentRow != null ? _grid.CurrentRow.Index : -1);
+            if (targetRow < 0) return;
+
+            _suppressSuggest = true;
+            _grid.EndEdit();
+            PopulateRowFromProduct(_grid.Rows[targetRow], prod);
+            RecalculateAll();
+            UpdateSelectedRowMarginPanel();
+            _suppressSuggest = false;
+
+            if (targetRow < _grid.Rows.Count)
+            {
+                _grid.CurrentCell = _grid.Rows[targetRow].Cells["Qty"];
+                _grid.BeginEdit(true);
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (_supplierDropdown != null && _supplierDropdown.Visible)
+            {
+                if (keyData == Keys.Down) { _supplierDropdown.MoveSelection(1); return true; }
+                if (keyData == Keys.Up) { _supplierDropdown.MoveSelection(-1); return true; }
+                if (keyData == Keys.Enter && _supplierDropdown.ConfirmCurrent()) { return true; }
+                if (keyData == Keys.Escape) { _supplierDropdown.HidePopup(); return true; }
+            }
+
+            if (_productDropdown != null && _productDropdown.Visible)
+            {
+                if (keyData == Keys.Down) { _productDropdown.MoveSelection(1); return true; }
+                if (keyData == Keys.Up) { _productDropdown.MoveSelection(-1); return true; }
+                if (keyData == Keys.Enter && _productDropdown.ConfirmCurrent()) { return true; }
+                if (keyData == Keys.Escape) { _productDropdown.HidePopup(); return true; }
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void Grid_KeyDown(object sender, KeyEventArgs e)
@@ -356,6 +504,7 @@ namespace PharmaAidPro.WinForms.Forms
             if (colName == "ProductName" && e.KeyCode == Keys.F2)
             {
                 e.Handled = true;
+                _productDropdown.HidePopup();
                 PickProductForRow(_grid.CurrentCell.RowIndex, Convert.ToString(_grid.CurrentCell.Value));
             }
             else if (colName == "BatchDesc" && e.KeyCode == Keys.F4)
@@ -371,14 +520,27 @@ namespace PharmaAidPro.WinForms.Forms
             var row = _grid.Rows[e.RowIndex];
             string colName = _grid.Columns[e.ColumnIndex].Name;
 
-            if (colName == "ProductName")
+            if (colName == "ProductName" && !_suppressSuggest)
             {
-                string typed = Convert.ToString(row.Cells["ProductName"].Value ?? string.Empty).Trim();
-                int existingCode = 0;
-                int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out existingCode);
-                if (!string.IsNullOrEmpty(typed) && existingCode == 0)
+                if (!_productDropdown.Visible)
                 {
-                    PickProductForRow(e.RowIndex, typed);
+                    string typed = Convert.ToString(row.Cells["ProductName"].Value ?? string.Empty).Trim();
+                    int existingCode = 0;
+                    int.TryParse(Convert.ToString(row.Cells["PCode"].Value), out existingCode);
+                    if (!string.IsNullOrEmpty(typed) && existingCode == 0)
+                    {
+                        var matches = _repo.SearchProducts(typed);
+                        if (matches.Count == 1)
+                        {
+                            PopulateRowFromProduct(row, matches[0]);
+                        }
+                        else if (matches.Count > 1)
+                        {
+                            _activeEditRowIndex = e.RowIndex;
+                            ShowProductDropdownBelowCell(e.RowIndex, typed);
+                            return;
+                        }
+                    }
                 }
             }
             else if (colName == "Mrp")
