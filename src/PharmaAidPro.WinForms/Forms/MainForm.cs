@@ -89,6 +89,23 @@ namespace PharmaAidPro.WinForms.Forms
             }
         }
 
+        private void OpenReports(int tabIndex)
+        {
+            using (var frm = new ReportsForm(_repo, tabIndex))
+            {
+                frm.ShowDialog(this);
+            }
+        }
+
+        private void OpenSettingsAndBackup()
+        {
+            using (var frm = new SettingsAndBackupForm(_repo))
+            {
+                frm.SettingsUpdated += UpdateStatusBar;
+                frm.ShowDialog(this);
+            }
+        }
+
         private void OpenPurchaseEntry()
         {
             var frm = new PurchaseEntryForm(_repo);
@@ -133,8 +150,8 @@ namespace PharmaAidPro.WinForms.Forms
             _menuStrip.Font = new Font("Tahoma", 9F, FontStyle.Regular);
 
             var fileMenu = new ToolStripMenuItem("&File");
-            fileMenu.DropDownItems.Add("Store Settings", null, delegate { ShowComingSoon("Store Settings"); });
-            fileMenu.DropDownItems.Add("Backup Database", null, delegate { ShowComingSoon("Backup Database"); });
+            fileMenu.DropDownItems.Add("Store Settings && Printer", null, delegate { OpenSettingsAndBackup(); });
+            fileMenu.DropDownItems.Add("Backup Database && Import CSV", null, delegate { OpenSettingsAndBackup(); });
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add("E&xit", null, delegate { this.Close(); });
 
@@ -153,9 +170,17 @@ namespace PharmaAidPro.WinForms.Forms
             inventoryMenu.DropDownItems.Add("Supplier Master", null, delegate { OpenSupplierMaster(); });
 
             var reportsMenu = new ToolStripMenuItem("&Reports");
+            reportsMenu.DropDownItems.Add("Sales Register", null, delegate { OpenReports(0); });
+            reportsMenu.DropDownItems.Add("Purchase / GRN Register", null, delegate { OpenReports(1); });
+            reportsMenu.DropDownItems.Add("Stock & Near-Expiry Report", null, delegate { OpenReports(2); });
+            reportsMenu.DropDownItems.Add("GST Summary", null, delegate { OpenReports(3); });
+
             var maintenanceMenu = new ToolStripMenuItem("&Maintenance");
+            maintenanceMenu.DropDownItems.Add("Backup & Legacy Import", null, delegate { OpenSettingsAndBackup(); });
+
             var windowsMenu = new ToolStripMenuItem("&Windows");
             var gstMenu = new ToolStripMenuItem("&GST");
+            gstMenu.DropDownItems.Add("GST Summary (Sales vs Purchase)", null, delegate { OpenReports(3); });
 
             _menuStrip.Items.AddRange(new ToolStripItem[]
             {

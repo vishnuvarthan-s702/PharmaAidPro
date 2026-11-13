@@ -440,5 +440,135 @@ namespace PharmaAidPro.WinForms.Data
                     ORDER BY p.Mrp ASC;", new { prod.Salt, Code = productCode }).ToList();
             }
         }
+
+        public void UpdateStoreSettings(StoreSettings settings)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                conn.Execute(@"
+                    UPDATE StoreSettings SET
+                        StoreName = @StoreName,
+                        Address = @Address,
+                        DrugLicenseNo = @DrugLicenseNo,
+                        Gstin = @Gstin,
+                        PrinterName = @PrinterName,
+                        BackupDirectory = @BackupDirectory
+                    WHERE Id = 1;", settings);
+            }
+        }
+
+        public List<PurchaseHeader> GetRecentPurchases(string filter)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                var like = "%" + (filter ?? string.Empty).Trim() + "%";
+                return conn.Query<PurchaseHeader>(@"
+                    SELECT * FROM PurchaseHeaders
+                    WHERE SupplierName LIKE @Like OR InvoiceNo LIKE @Like OR CAST(GrnNumber AS TEXT) LIKE @Like
+                    ORDER BY GrnNumber DESC
+                    LIMIT 200;", new { Like = like }).ToList();
+            }
+        }
+
+        public List<dynamic> GetStockAndExpiryReport(int withinMonths)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                string cutoff = withinMonths > 0
+                    ? System.DateTime.Now.AddMonths(withinMonths).ToString("yyyy-MM")
+                    : "9999-12";
+
+                return conn.Query(@"
+                    SELECT p.ProductCode, p.ProductName, b.BatchDesc, b.ExpiryMMYY, b.ExpirySortKey,
+                           b.StockBaseUnits, p.SaleUnit, b.Mrp,
+                           ROUND((b.StockBaseUnits / CASE WHEN p.SaleUnit > 0 THEN p.SaleUnit ELSE 1 END) * b.Mrp, 2) AS StockValue
+                    FROM ProductBatches b
+                    INNER JOIN Products p ON p.ProductCode = b.ProductCode
+                    WHERE b.StockBaseUnits > 0 AND b.ExpirySortKey <= @Cutoff
+                    ORDER BY b.ExpirySortKey ASC, p.ProductName ASC;", new { Cutoff = cutoff }).ToList();
+            }
+        }
+
+        public string BackupDatabase(string targetFolder)
+        {
+            if (string.IsNullOrWhiteSpace(targetFolder))
+            {
+                targetFolder = System.IO.Path.Combine(DatabaseInitializer.DataDirectory, "Backups");
+            }
+            if (!System.IO.Directory.Exists(targetFolder))
+            {
+                System.IO.Directory.CreateDirectory(targetFolder);
+            }
+
+            string fileName = string.Format("PharmaAidPro_{0}.db", System.DateTime.Now.ToString("yyyyMMdd_HHmmss"));
+            string destPath = System.IO.Path.Combine(targetFolder, fileName);
+
+            using (var src = DatabaseInitializer.CreateConnection())
+            using (var dst = new System.Data.SQLite.SQLiteConnection(string.Format("Data Source={0};Version=3;", destPath)))
+            {
+                dst.Open();
+                src.BackupDatabase(dst, "main", "main", -1, null, 0);
+            }
+            return destPath;
+        }
+
+        public int ImportProductsFromCsv(string csvPath)
+        {
+            int count = 0;
+            var lines = System.IO.File.ReadAllLines(csvPath);
+            if (lines.Length <= 1) return 0;
+
+            using (var conn = DatabaseInitializer.CreateConnection())
+            using (var tx = conn.BeginTransaction())
+            {
+                int maxCode = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(ProductCode), 39031) FROM Products", transaction: tx);
+                for (int i = 1; i < lines.Length; i++)
+                {
+                    var cols = lines[i].Split(',');
+                    if (cols.Length < 2) continue;
+
+                    int code;
+                    if (!int.TryParse(cols[0].Trim(), out code) || code <= 0)
+                    {
+                        maxCode++;
+                        code = maxCode;
+                    }
+                    string name = cols[1].Trim().ToUpperInvariant();
+                    if (string.IsNullOrEmpty(name)) continue;
+
+                    int pUnit = cols.Length > 2 ? ParseIntOrDefault(cols[2], 1) : 1;
+                    decimal pPrice = cols.Length > 3 ? ParseDecOrDefault(cols[3], 0m) : 0m;
+                    int sUnit = cols.Length > 4 ? ParseIntOrDefault(cols[4], pUnit) : pUnit;
+                    decimal mrp = cols.Length > 5 ? ParseDecOrDefault(cols[5], 0m) : 0m;
+                    string hsn = cols.Length > 6 ? cols[6].Trim() : "0";
+                    decimal tax = cols.Length > 7 ? ParseDecOrDefault(cols[7], 5m) : 5m;
+
+                    conn.Execute(@"
+                        INSERT OR REPLACE INTO Products (
+                            ProductCode, ProductName, PurchaseUnit, PurchasePrice,
+                            SaleUnit, SalePrice, Mrp, HsnCode, TaxPercent, Rack
+                        ) VALUES (
+                            @Code, @Name, @PUnit, @PPrice, @SUnit, @Mrp, @Mrp, @Hsn, @Tax, 'STORE'
+                        );", new { Code = code, Name = name, PUnit = pUnit, PPrice = pPrice, SUnit = sUnit, Mrp = mrp, Hsn = hsn, Tax = tax }, tx);
+                    count++;
+                }
+
+                conn.Execute("UPDATE StoreSettings SET NextProductCode = (SELECT COALESCE(MAX(ProductCode), 39031) + 1 FROM Products) WHERE Id = 1;", transaction: tx);
+                tx.Commit();
+            }
+            return count;
+        }
+
+        private static int ParseIntOrDefault(string s, int def)
+        {
+            int v;
+            return int.TryParse(s.Trim(), out v) && v > 0 ? v : def;
+        }
+
+        private static decimal ParseDecOrDefault(string s, decimal def)
+        {
+            decimal v;
+            return decimal.TryParse(s.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out v) ? v : def;
+        }
     }
 }

@@ -82,7 +82,13 @@
     <Compile Include="Forms\PurchaseEntryForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\ReportsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\SalesPosForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\SettingsAndBackupForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\SupplierMasterForm.cs">
