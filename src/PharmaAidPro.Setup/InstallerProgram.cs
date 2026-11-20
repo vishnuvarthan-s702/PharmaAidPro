@@ -85,25 +85,51 @@ namespace PharmaAidPro.Setup
             headerPanel.Height = 88;
             headerPanel.BackColor = Color.FromArgb(20, 62, 108);
 
+            PictureBox picLogo = new PictureBox();
+            picLogo.Bounds = new Rectangle(14, 6, 76, 76);
+            picLogo.SizeMode = PictureBoxSizeMode.Zoom;
+            picLogo.BackColor = Color.Transparent;
+            try
+            {
+                using (Stream logoStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("app_logo.jpg"))
+                {
+                    if (logoStream != null)
+                    {
+                        using (Image tempImg = Image.FromStream(logoStream))
+                        {
+                            Bitmap bmp = new Bitmap(tempImg.Width, tempImg.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                            using (Graphics g = Graphics.FromImage(bmp))
+                            {
+                                g.DrawImage(tempImg, 0, 0, tempImg.Width, tempImg.Height);
+                            }
+                            picLogo.Image = bmp;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
             Label lblTitle = new Label();
             lblTitle.Text = "The Nethaji Medical Stores";
             lblTitle.ForeColor = Color.White;
             lblTitle.Font = new Font("Tahoma", 15.5F, FontStyle.Bold);
-            lblTitle.Bounds = new Rectangle(20, 12, 520, 28);
+            lblTitle.Bounds = new Rectangle(100, 12, 445, 28);
 
             Label lblSubtitle = new Label();
             lblSubtitle.Text = "CHEMIST & DRUGGIST  •  MEENAKSHIPURAM, NAGERCOIL";
             lblSubtitle.ForeColor = Color.FromArgb(255, 216, 110);
             lblSubtitle.Font = new Font("Tahoma", 8.75F, FontStyle.Bold);
-            lblSubtitle.Bounds = new Rectangle(22, 42, 520, 18);
+            lblSubtitle.Bounds = new Rectangle(102, 42, 443, 18);
 
             Label lblVersion = new Label();
             lblVersion.Text = "PharmaAid Pro Offline ERP Setup Wizard  |  Windows 7 (32-bit x86) & Windows 10/11";
             lblVersion.ForeColor = Color.FromArgb(205, 226, 248);
             lblVersion.Font = new Font("Tahoma", 8.25F, FontStyle.Regular);
-            lblVersion.Bounds = new Rectangle(22, 62, 520, 16);
+            lblVersion.Bounds = new Rectangle(102, 62, 443, 16);
 
-            headerPanel.Controls.AddRange(new Control[] { lblTitle, lblSubtitle, lblVersion });
+            headerPanel.Controls.AddRange(new Control[] { picLogo, lblTitle, lblSubtitle, lblVersion });
 
             // Body Card
             Panel card = new Panel();

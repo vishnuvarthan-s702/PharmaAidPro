@@ -45,6 +45,7 @@ $fs.Close()
 $setupExe = "$installerDir\PharmaAidPro_Setup.exe"
 $setupConfig = "$installerDir\PharmaAidPro_Setup.exe.config"
 $iconPath = "$root\src\PharmaAidPro.WinForms\Assets\app.ico"
+$logoPath = "$root\src\PharmaAidPro.WinForms\Assets\app_logo.jpg"
 
 Write-Host "3. Compiling standalone x86 .NET 2.0/3.5 installer (PharmaAidPro_Setup.exe)..."
 & $csc35 /nologo /target:winexe /platform:x86 /optimize+ `
@@ -54,6 +55,7 @@ Write-Host "3. Compiling standalone x86 .NET 2.0/3.5 installer (PharmaAidPro_Set
     /reference:System.Drawing.dll `
     /reference:System.Windows.Forms.dll `
     /resource:"$payloadPak,payload.pak" `
+    /resource:"$logoPath,app_logo.jpg" `
     "$root\src\PharmaAidPro.Setup\InstallerProgram.cs"
 
 Remove-Item $payloadPak -Force

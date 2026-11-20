@@ -46,7 +46,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void InitializeComponent()
         {
             this.Text = "The Nethaji Medical Stores - Login (Shopaid.Net-RE v7.5.16)";
-            this.ClientSize = new Size(510, 365);
+            this.ClientSize = new Size(530, 365);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MaximizeBox = false;
@@ -54,13 +54,22 @@ namespace PharmaAidPro.WinForms.Forms
             this.KeyPreview = true;
             this.BackColor = Color.FromArgb(235, 241, 248);
             this.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+            LoadingSplashForm.ApplyBrandingIcon(this);
 
             // Top Brand Header Banner
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 82,
+                Height = 84,
                 BackColor = Color.FromArgb(22, 66, 114)
+            };
+
+            var picLogo = new PictureBox
+            {
+                Bounds = new Rectangle(14, 6, 72, 72),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.Transparent,
+                Image = LoadingSplashForm.LoadLogoBitmap()
             };
 
             var lblStoreTitle = new Label
@@ -69,7 +78,7 @@ namespace PharmaAidPro.WinForms.Forms
                 ForeColor = Color.White,
                 Font = new Font("Tahoma", 15F, FontStyle.Bold),
                 AutoSize = false,
-                Bounds = new Rectangle(18, 10, 474, 28)
+                Bounds = new Rectangle(96, 10, 420, 28)
             };
 
             var lblStoreSub = new Label
@@ -78,7 +87,7 @@ namespace PharmaAidPro.WinForms.Forms
                 ForeColor = Color.FromArgb(255, 218, 120),
                 Font = new Font("Tahoma", 8.5F, FontStyle.Bold),
                 AutoSize = false,
-                Bounds = new Rectangle(20, 39, 470, 18)
+                Bounds = new Rectangle(98, 39, 418, 18)
             };
 
             var lblLicBadge = new Label
@@ -87,15 +96,15 @@ namespace PharmaAidPro.WinForms.Forms
                 ForeColor = Color.FromArgb(200, 222, 245),
                 Font = new Font("Tahoma", 8F, FontStyle.Regular),
                 AutoSize = false,
-                Bounds = new Rectangle(20, 58, 470, 16)
+                Bounds = new Rectangle(98, 58, 418, 16)
             };
 
-            headerPanel.Controls.AddRange(new Control[] { lblStoreTitle, lblStoreSub, lblLicBadge });
+            headerPanel.Controls.AddRange(new Control[] { picLogo, lblStoreTitle, lblStoreSub, lblLicBadge });
 
             // Center Login Card
             var cardPanel = new Panel
             {
-                Bounds = new Rectangle(22, 96, 466, 186),
+                Bounds = new Rectangle(22, 98, 486, 186),
                 BackColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };

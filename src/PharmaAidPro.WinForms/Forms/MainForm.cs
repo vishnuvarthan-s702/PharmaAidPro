@@ -44,6 +44,24 @@ namespace PharmaAidPro.WinForms.Forms
             try
             {
                 _mdiBgImage = LoadingSplashForm.LoadStoreBitmap();
+                using (var logoBmp = LoadingSplashForm.LoadLogoBitmap())
+                {
+                    if (_mdiBgImage != null && logoBmp != null)
+                    {
+                        using (var g = Graphics.FromImage(_mdiBgImage))
+                        {
+                            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                            int badgeSize = 115;
+                            var badgeRect = new Rectangle(_mdiBgImage.Width - badgeSize - 14, 14, badgeSize, badgeSize);
+                            g.DrawImage(logoBmp, badgeRect);
+                            using (var goldPen = new Pen(Color.FromArgb(255, 216, 102), 2f))
+                            {
+                                g.DrawRectangle(goldPen, badgeRect);
+                            }
+                        }
+                    }
+                }
                 if (_mdiBgImage != null)
                 {
                     foreach (Control ctl in this.Controls)
@@ -72,6 +90,7 @@ namespace PharmaAidPro.WinForms.Forms
             this.BackColor = Color.FromArgb(228, 234, 242);
             this.Font = new Font("Tahoma", 9F, FontStyle.Regular);
             this.Text = string.Format("{0} - PharmaAid Pro (Offline Edition)", _settings.StoreName);
+            LoadingSplashForm.ApplyBrandingIcon(this);
 
             BuildMenuStrip();
             BuildStatusStrip();
@@ -113,6 +132,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void OpenSalesPos()
         {
             var frm = new SalesPosForm(_repo);
+            LoadingSplashForm.ApplyBrandingIcon(frm);
             frm.SaleCompleted += UpdateStatusBar;
             frm.ShowDialog(this);
         }
@@ -121,6 +141,7 @@ namespace PharmaAidPro.WinForms.Forms
         {
             using (var frm = new BillCopyForm(_repo))
             {
+                LoadingSplashForm.ApplyBrandingIcon(frm);
                 frm.ShowDialog(this);
             }
         }
@@ -129,6 +150,7 @@ namespace PharmaAidPro.WinForms.Forms
         {
             using (var frm = new ReportsForm(_repo, tabIndex))
             {
+                LoadingSplashForm.ApplyBrandingIcon(frm);
                 frm.ShowDialog(this);
             }
         }
@@ -137,6 +159,7 @@ namespace PharmaAidPro.WinForms.Forms
         {
             using (var frm = new SettingsAndBackupForm(_repo))
             {
+                LoadingSplashForm.ApplyBrandingIcon(frm);
                 frm.SettingsUpdated += UpdateStatusBar;
                 frm.ShowDialog(this);
             }
@@ -145,6 +168,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void OpenPurchaseEntry()
         {
             var frm = new PurchaseEntryForm(_repo);
+            LoadingSplashForm.ApplyBrandingIcon(frm);
             frm.GrnSaved += UpdateStatusBar;
             frm.ShowDialog(this);
         }
@@ -153,6 +177,7 @@ namespace PharmaAidPro.WinForms.Forms
         {
             using (var dlg = new NewProductForm(_repo))
             {
+                LoadingSplashForm.ApplyBrandingIcon(dlg);
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
                     UpdateStatusBar();
@@ -168,6 +193,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void OpenProductMaster()
         {
             var frm = new ProductMasterForm(_repo);
+            LoadingSplashForm.ApplyBrandingIcon(frm);
             frm.DataChanged += UpdateStatusBar;
             frm.ShowDialog(this);
         }
@@ -175,6 +201,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void OpenSupplierMaster()
         {
             var frm = new SupplierMasterForm(_repo);
+            LoadingSplashForm.ApplyBrandingIcon(frm);
             frm.DataChanged += UpdateStatusBar;
             frm.ShowDialog(this);
         }
@@ -184,6 +211,14 @@ namespace PharmaAidPro.WinForms.Forms
             _menuStrip = new MenuStrip();
             _menuStrip.BackColor = Color.FromArgb(240, 244, 249);
             _menuStrip.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+            _menuStrip.ImageScalingSize = new Size(22, 22);
+
+            var brandLogoItem = new ToolStripLabel
+            {
+                Image = LoadingSplashForm.LoadLogoBitmap(),
+                ImageScaling = ToolStripItemImageScaling.SizeToFit,
+                ToolTipText = "The Nethaji Medical Stores"
+            };
 
             var fileMenu = new ToolStripMenuItem("&File");
             fileMenu.DropDownItems.Add("Store Settings && Printer", null, delegate { OpenSettingsAndBackup(); });
@@ -235,7 +270,7 @@ namespace PharmaAidPro.WinForms.Forms
 
             _menuStrip.Items.AddRange(new ToolStripItem[]
             {
-                fileMenu, salesMenu, purchaseMenu, orderMenu,
+                brandLogoItem, fileMenu, salesMenu, purchaseMenu, orderMenu,
                 accountsMenu, inventoryMenu, reportsMenu,
                 maintenanceMenu, windowsMenu, gstMenu
             });
