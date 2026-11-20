@@ -492,7 +492,49 @@ namespace PharmaAidPro.WinForms.Forms
                 if (keyData == Keys.Escape) { _productDropdown.HidePopup(); return true; }
             }
 
+            if (keyData == Keys.Enter && _grid != null && _grid.CurrentCell != null && (_grid.Focused || _grid.ContainsFocus || _grid.IsCurrentCellInEditMode))
+            {
+                MoveToNextGridFieldInRow();
+                return true;
+            }
+
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void MoveToNextGridFieldInRow()
+        {
+            if (_grid.CurrentCell == null) return;
+            int rowIdx = _grid.CurrentCell.RowIndex;
+            int colIdx = _grid.CurrentCell.ColumnIndex;
+
+            _grid.EndEdit();
+
+            if (_productDropdown != null && _productDropdown.Visible)
+            {
+                return;
+            }
+
+            for (int c = colIdx + 1; c < _grid.Columns.Count; c++)
+            {
+                if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                {
+                    _grid.CurrentCell = _grid.Rows[rowIdx].Cells[c];
+                    _grid.BeginEdit(true);
+                    return;
+                }
+            }
+
+            int nextRow = rowIdx + 1;
+            if (nextRow >= _grid.Rows.Count)
+            {
+                _grid.Rows.Add();
+                nextRow = _grid.Rows.Count - 1;
+            }
+            if (nextRow < _grid.Rows.Count && _grid.Columns.Contains("ProductName"))
+            {
+                _grid.CurrentCell = _grid.Rows[nextRow].Cells["ProductName"];
+                _grid.BeginEdit(true);
+            }
         }
 
         private void Grid_KeyDown(object sender, KeyEventArgs e)
