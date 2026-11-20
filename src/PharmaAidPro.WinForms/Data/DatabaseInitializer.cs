@@ -262,9 +262,13 @@ namespace PharmaAidPro.WinForms.Data
             {
                 conn.Execute(@"
                     INSERT INTO Users (UserName, Password, Role, IsActive) VALUES
-                    ('Admin', 'SHOPAID', 'Administrator', 1),
-                    ('Counter1', '1234', 'Cashier', 1);
+                    ('Admin', 'pass', 'Administrator', 1),
+                    ('Counter1', 'pass', 'Cashier', 1);
                 ");
+            }
+            else
+            {
+                conn.Execute("UPDATE Users SET Password = 'pass' WHERE LOWER(UserName) = 'admin';");
             }
 
             if (conn.ExecuteScalar<int>("SELECT COUNT(*) FROM HsnTaxMaster") == 0)

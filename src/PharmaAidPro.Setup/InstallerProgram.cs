@@ -211,7 +211,7 @@ namespace PharmaAidPro.Setup
             _btnCancel.Click += delegate { this.Close(); };
 
             Label lblFooterNote = new Label();
-            lblFooterNote.Text = "Default Login: Admin / SHOPAID";
+            lblFooterNote.Text = "Default Login: Admin / pass";
             lblFooterNote.ForeColor = Color.FromArgb(80, 100, 125);
             lblFooterNote.Font = new Font("Tahoma", 8.5F, FontStyle.Italic);
             lblFooterNote.Bounds = new Rectangle(22, 362, 250, 20);
@@ -337,7 +337,7 @@ namespace PharmaAidPro.Setup
                     "PharmaAid Pro has been installed successfully!\n\n" +
                     "Folder: " + targetDir + "\n" +
                     "Default Login: Admin\n" +
-                    "Default Password: SHOPAID",
+                    "Default Password: pass",
                     "Installation Complete",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);

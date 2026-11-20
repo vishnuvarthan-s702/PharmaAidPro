@@ -19,7 +19,7 @@ namespace PharmaAidPro.WinForms
             {
                 var repo = new PharmaRepository();
                 var settings = repo.GetStoreSettings();
-                var admin = repo.ValidateUser("Admin", "SHOPAID");
+                var admin = repo.ValidateUser("Admin", "pass");
                 int p, b, s;
                 repo.GetDatabaseCounts(out p, out b, out s);
                 string imgStatus = "NO_IMG";
