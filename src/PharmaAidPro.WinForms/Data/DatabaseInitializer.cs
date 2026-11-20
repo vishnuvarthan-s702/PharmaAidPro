@@ -1,6 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Data.SQLite;
+using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using Dapper;
 
 namespace PharmaAidPro.WinForms.Data
@@ -323,6 +328,359 @@ namespace PharmaAidPro.WinForms.Data
                     (39026, 'AH6087',   '02/28', '2028-02', 118.00, 152.81, 152.81, 10, 'STORE', '2026-10-23'),
                     (39027, 'OR0596B',  '03/28', '2028-03', 220.00, 287.00, 287.00, 20, 'STORE', '2026-10-24');
                 ");
+            }
+
+            LoadBundledCatalogIfNeeded(conn);
+
+            // Auto-sync live stock from SQL Server only when running directly on the shop machine COMPAQ-PC
+            if (string.Equals(Environment.MachineName, "COMPAQ-PC", StringComparison.OrdinalIgnoreCase) &&
+                conn.ExecuteScalar<int>("SELECT COUNT(*) FROM ProductBatches") <= 20)
+            {
+                int pSync, bSync, sSync;
+                string msg;
+                TrySyncFromLocalShopaidSqlServer(conn, "COMPAQ-PC", out pSync, out bSync, out sSync, out msg);
+            }
+        }
+
+        private static string ResolveCatalogPakPath()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] candidates = new[]
+            {
+                Path.Combine(Path.Combine(baseDir, "Assets"), "catalog.pak"),
+                Path.Combine(baseDir, "catalog.pak"),
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\Assets\catalog.pak"))
+            };
+            foreach (string c in candidates)
+            {
+                if (File.Exists(c)) return c;
+            }
+            return null;
+        }
+
+        public static int LoadBundledCatalogIfNeeded(SQLiteConnection conn)
+        {
+            int currentCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Products");
+            if (currentCount >= 1000) return 0;
+
+            string pakPath = ResolveCatalogPakPath();
+            if (pakPath == null || !File.Exists(pakPath)) return 0;
+
+            int inserted = 0;
+            using (var tx = conn.BeginTransaction())
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.Transaction = tx;
+                cmd.CommandText = @"
+                    INSERT OR IGNORE INTO Products
+                    (ProductCode, ProductName, PurchaseUnit, PurchasePrice, SaleUnit, SalePrice, Mrp, HsnCode, TaxPercent, Rack, Salt)
+                    VALUES (@Code, @Name, @PurUnit, @PurPrice, @SaleUnit, @SalePrice, @Mrp, '30049099', 5, 'STORE', '');";
+
+                var pCode = cmd.Parameters.Add("@Code", DbType.Int32);
+                var pName = cmd.Parameters.Add("@Name", DbType.String);
+                var pPurUnit = cmd.Parameters.Add("@PurUnit", DbType.Int32);
+                var pPurPrice = cmd.Parameters.Add("@PurPrice", DbType.Double);
+                var pSaleUnit = cmd.Parameters.Add("@SaleUnit", DbType.Int32);
+                var pSalePrice = cmd.Parameters.Add("@SalePrice", DbType.Double);
+                var pMrp = cmd.Parameters.Add("@Mrp", DbType.Double);
+
+                using (var fs = File.OpenRead(pakPath))
+                using (var gz = new GZipStream(fs, CompressionMode.Decompress))
+                using (var br = new BinaryReader(gz))
+                {
+                    int total = br.ReadInt32();
+                    for (int i = 0; i < total; i++)
+                    {
+                        pCode.Value = br.ReadInt32();
+                        pName.Value = br.ReadString();
+                        pPurUnit.Value = br.ReadInt32();
+                        pSaleUnit.Value = br.ReadInt32();
+                        pPurPrice.Value = br.ReadDouble();
+                        pSalePrice.Value = br.ReadDouble();
+                        pMrp.Value = br.ReadDouble();
+                        inserted += cmd.ExecuteNonQuery();
+                    }
+                }
+
+                tx.Commit();
+            }
+            return inserted;
+        }
+
+        public static bool TrySyncFromLocalShopaidSqlServer(
+            SQLiteConnection sqliteConn,
+            string customServer,
+            out int productsSynced,
+            out int batchesSynced,
+            out int suppliersSynced,
+            out string statusMessage)
+        {
+            productsSynced = 0;
+            batchesSynced = 0;
+            suppliersSynced = 0;
+            statusMessage = "";
+
+            var servers = new List<string>();
+            if (customServer != null && customServer.Trim().Length > 0)
+            {
+                servers.Add(customServer.Trim());
+            }
+            string machine = Environment.MachineName;
+            if (!servers.Contains(machine)) servers.Add(machine);
+            if (!servers.Contains("COMPAQ-PC")) servers.Add("COMPAQ-PC");
+            if (!servers.Contains("(local)")) servers.Add("(local)");
+            if (!servers.Contains(".")) servers.Add(".");
+            if (!servers.Contains(@".\SQLEXPRESS")) servers.Add(@".\SQLEXPRESS");
+            if (!servers.Contains(machine + @"\SQLEXPRESS")) servers.Add(machine + @"\SQLEXPRESS");
+
+            SqlConnection sqlConn = null;
+            string connectedServer = null;
+
+            foreach (string srv in servers)
+            {
+                string[] connStrings = new[]
+                {
+                    string.Format("Data Source={0};Initial Catalog=shopaid;User ID=wonder;Password=wrcss;Connect Timeout=2;", srv),
+                    string.Format("Data Source={0};Initial Catalog=shopaid;Integrated Security=True;Connect Timeout=2;", srv)
+                };
+
+                foreach (string cs in connStrings)
+                {
+                    try
+                    {
+                        var candidate = new SqlConnection(cs);
+                        candidate.Open();
+                        sqlConn = candidate;
+                        connectedServer = srv;
+                        break;
+                    }
+                    catch
+                    {
+                    }
+                }
+                if (sqlConn != null) break;
+            }
+
+            if (sqlConn == null)
+            {
+                statusMessage = "Could not connect to local SQL Server database 'shopaid'. (Built-in 31,857 medicine catalog is active.)";
+                return false;
+            }
+
+            try
+            {
+                using (sqlConn)
+                using (var tx = sqliteConn.BeginTransaction())
+                {
+                    // 1. Sync Products
+                    using (var sqlCmd = new SqlCommand("SELECT ProductCode, ProductName, ISNULL(PurchaseUnit,1) AS PurUnit, ISNULL(PurchasePrice,0) AS PurPrice, ISNULL(SaleUnit,1) AS SUnit, ISNULL(SalePrice,0) AS SPrice, ISNULL(MRP,0) AS Mrp FROM Products WITH (NOLOCK)", sqlConn))
+                    using (var rdr = sqlCmd.ExecuteReader())
+                    using (var upProd = sqliteConn.CreateCommand())
+                    {
+                        upProd.Transaction = tx;
+                        upProd.CommandText = @"
+                            INSERT OR REPLACE INTO Products
+                            (ProductCode, ProductName, PurchaseUnit, PurchasePrice, SaleUnit, SalePrice, Mrp, HsnCode, TaxPercent, Rack, Salt)
+                            VALUES (@Code, @Name, @PurUnit, @PurPrice, @SaleUnit, @SalePrice, @Mrp,
+                                    COALESCE((SELECT HsnCode FROM Products WHERE ProductCode = @Code), '30049099'),
+                                    COALESCE((SELECT TaxPercent FROM Products WHERE ProductCode = @Code), 5),
+                                    COALESCE((SELECT Rack FROM Products WHERE ProductCode = @Code), 'STORE'),
+                                    COALESCE((SELECT Salt FROM Products WHERE ProductCode = @Code), ''));";
+
+                        var pCode = upProd.Parameters.Add("@Code", DbType.Int32);
+                        var pName = upProd.Parameters.Add("@Name", DbType.String);
+                        var pPurUnit = upProd.Parameters.Add("@PurUnit", DbType.Int32);
+                        var pPurPrice = upProd.Parameters.Add("@PurPrice", DbType.Double);
+                        var pSaleUnit = upProd.Parameters.Add("@SaleUnit", DbType.Int32);
+                        var pSalePrice = upProd.Parameters.Add("@SalePrice", DbType.Double);
+                        var pMrp = upProd.Parameters.Add("@Mrp", DbType.Double);
+
+                        while (rdr.Read())
+                        {
+                            int code = Convert.ToInt32(rdr[0], CultureInfo.InvariantCulture);
+                            string name = Convert.ToString(rdr[1] ?? "").Trim();
+                            if (code <= 0 || name.Length == 0) continue;
+
+                            int purU = Math.Max(1, Convert.ToInt32(Math.Round(Convert.ToDouble(rdr[2], CultureInfo.InvariantCulture))));
+                            double purP = Math.Max(0, Convert.ToDouble(rdr[3], CultureInfo.InvariantCulture));
+                            int salU = Math.Max(1, Convert.ToInt32(Math.Round(Convert.ToDouble(rdr[4], CultureInfo.InvariantCulture))));
+                            double salP = Math.Max(0, Convert.ToDouble(rdr[5], CultureInfo.InvariantCulture));
+                            double mrp = Math.Max(0, Convert.ToDouble(rdr[6], CultureInfo.InvariantCulture));
+                            if (salP <= 0) salP = mrp;
+
+                            pCode.Value = code;
+                            pName.Value = name;
+                            pPurUnit.Value = purU;
+                            pPurPrice.Value = Math.Round(purP, 2);
+                            pSaleUnit.Value = salU;
+                            pSalePrice.Value = Math.Round(salP, 2);
+                            pMrp.Value = Math.Round(mrp, 2);
+                            upProd.ExecuteNonQuery();
+                            productsSynced++;
+                        }
+                    }
+
+                    // 2. Sync Active Batches & Stock
+                    try
+                    {
+                        using (var sqlCmd = new SqlCommand(@"
+                            SELECT ProductCode,
+                                   ISNULL(BatchDescription, 'DEFAULT') AS BatchDesc,
+                                   ExpiryDate,
+                                   ISNULL(PurchasePrice, 0) AS PPrice,
+                                   ISNULL(SalePrice, 0) AS SPrice,
+                                   ISNULL(MRP, 0) AS Mrp,
+                                   (ISNULL(Stock, 0) + ISNULL(FreeStock, 0)) AS TotalStock
+                            FROM Batches WITH (NOLOCK)
+                            WHERE (ISNULL(Stock, 0) + ISNULL(FreeStock, 0)) > 0", sqlConn))
+                        using (var rdr = sqlCmd.ExecuteReader())
+                        using (var upBatch = sqliteConn.CreateCommand())
+                        using (var upProdPrice = sqliteConn.CreateCommand())
+                        {
+                            upBatch.Transaction = tx;
+                            upBatch.CommandText = @"
+                                INSERT OR REPLACE INTO ProductBatches
+                                (ProductCode, BatchDesc, ExpiryMMYY, ExpirySortKey, PPrice, SPrice, Mrp, StockBaseUnits, Location, LastUpdated)
+                                VALUES (@PCode, @BDesc, @ExpMMYY, @ExpSort, @PPrice, @SPrice, @Mrp, @Stock, 'STORE', @Upd);";
+
+                            var bPCode = upBatch.Parameters.Add("@PCode", DbType.Int32);
+                            var bDesc = upBatch.Parameters.Add("@BDesc", DbType.String);
+                            var bExp = upBatch.Parameters.Add("@ExpMMYY", DbType.String);
+                            var bSort = upBatch.Parameters.Add("@ExpSort", DbType.String);
+                            var bPP = upBatch.Parameters.Add("@PPrice", DbType.Double);
+                            var bSP = upBatch.Parameters.Add("@SPrice", DbType.Double);
+                            var bMrp = upBatch.Parameters.Add("@Mrp", DbType.Double);
+                            var bStock = upBatch.Parameters.Add("@Stock", DbType.Double);
+                            var bUpd = upBatch.Parameters.Add("@Upd", DbType.String);
+
+                            upProdPrice.Transaction = tx;
+                            upProdPrice.CommandText = "UPDATE Products SET Mrp = @Mrp, SalePrice = @SPrice, PurchasePrice = CASE WHEN @PPrice > 0 THEN @PPrice ELSE PurchasePrice END WHERE ProductCode = @PCode AND @Mrp > 0;";
+                            var uPCode = upProdPrice.Parameters.Add("@PCode", DbType.Int32);
+                            var uMrp = upProdPrice.Parameters.Add("@Mrp", DbType.Double);
+                            var uSP = upProdPrice.Parameters.Add("@SPrice", DbType.Double);
+                            var uPP = upProdPrice.Parameters.Add("@PPrice", DbType.Double);
+
+                            string today = DateTime.Now.ToString("yyyy-MM-dd");
+
+                            while (rdr.Read())
+                            {
+                                int pcode = Convert.ToInt32(rdr[0], CultureInfo.InvariantCulture);
+                                string batchDesc = Convert.ToString(rdr[1] ?? "DEFAULT").Trim();
+                                if (batchDesc.Length == 0) batchDesc = "DEFAULT";
+
+                                string expMmyy = "12/28";
+                                string expSort = "2028-12";
+                                if (!(rdr[2] is DBNull) && rdr[2] != null)
+                                {
+                                    DateTime dt;
+                                    if (rdr[2] is DateTime)
+                                    {
+                                        dt = (DateTime)rdr[2];
+                                        expMmyy = dt.ToString("MM/yy");
+                                        expSort = dt.ToString("yyyy-MM");
+                                    }
+                                    else if (DateTime.TryParse(Convert.ToString(rdr[2]), out dt))
+                                    {
+                                        expMmyy = dt.ToString("MM/yy");
+                                        expSort = dt.ToString("yyyy-MM");
+                                    }
+                                }
+
+                                double pp = Math.Round(Math.Max(0, Convert.ToDouble(rdr[3], CultureInfo.InvariantCulture)), 2);
+                                double sp = Math.Round(Math.Max(0, Convert.ToDouble(rdr[4], CultureInfo.InvariantCulture)), 2);
+                                double mrp = Math.Round(Math.Max(0, Convert.ToDouble(rdr[5], CultureInfo.InvariantCulture)), 2);
+                                if (sp <= 0) sp = mrp;
+                                double stk = Math.Round(Math.Max(0, Convert.ToDouble(rdr[6], CultureInfo.InvariantCulture)), 2);
+
+                                bPCode.Value = pcode;
+                                bDesc.Value = batchDesc;
+                                bExp.Value = expMmyy;
+                                bSort.Value = expSort;
+                                bPP.Value = pp;
+                                bSP.Value = sp;
+                                bMrp.Value = mrp;
+                                bStock.Value = stk;
+                                bUpd.Value = today;
+                                upBatch.ExecuteNonQuery();
+
+                                uPCode.Value = pcode;
+                                uMrp.Value = mrp;
+                                uSP.Value = sp;
+                                uPP.Value = pp;
+                                upProdPrice.ExecuteNonQuery();
+
+                                batchesSynced++;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    // 3. Sync Suppliers
+                    try
+                    {
+                        using (var sqlCmd = new SqlCommand("SELECT * FROM Suppliers WITH (NOLOCK)", sqlConn))
+                        using (var rdr = sqlCmd.ExecuteReader())
+                        using (var upSup = sqliteConn.CreateCommand())
+                        {
+                            upSup.Transaction = tx;
+                            upSup.CommandText = @"
+                                INSERT OR REPLACE INTO Suppliers
+                                (SupplierCode, SupplierName, Address, Phone, Gstin, StateName, OutstandingAmount)
+                                VALUES (@Code, @Name, @Addr, @Phone, @Gstin, 'TAMILNADU', 0);";
+
+                            var sCode = upSup.Parameters.Add("@Code", DbType.Int32);
+                            var sName = upSup.Parameters.Add("@Name", DbType.String);
+                            var sAddr = upSup.Parameters.Add("@Addr", DbType.String);
+                            var sPhone = upSup.Parameters.Add("@Phone", DbType.String);
+                            var sGstin = upSup.Parameters.Add("@Gstin", DbType.String);
+
+                            var cols = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                            for (int i = 0; i < rdr.FieldCount; i++) cols[rdr.GetName(i)] = i;
+
+                            int idxCode = cols.ContainsKey("SupplierCode") ? cols["SupplierCode"] : 0;
+                            int idxName = cols.ContainsKey("SupplierName") ? cols["SupplierName"] : 1;
+                            int idxAddr = cols.ContainsKey("Address1") ? cols["Address1"] : (cols.ContainsKey("Address") ? cols["Address"] : -1);
+                            int idxPhone = cols.ContainsKey("Phone") ? cols["Phone"] : (cols.ContainsKey("Mobile") ? cols["Mobile"] : -1);
+                            int idxGst = cols.ContainsKey("GSTNumber") ? cols["GSTNumber"] : (cols.ContainsKey("TINNumber") ? cols["TINNumber"] : -1);
+
+                            while (rdr.Read())
+                            {
+                                int code = Convert.ToInt32(rdr[idxCode], CultureInfo.InvariantCulture);
+                                string name = Convert.ToString(rdr[idxName] ?? "").Trim();
+                                if (code <= 0 || name.Length == 0) continue;
+
+                                sCode.Value = code;
+                                sName.Value = name;
+                                sAddr.Value = idxAddr >= 0 ? Convert.ToString(rdr[idxAddr] ?? "").Trim() : "";
+                                sPhone.Value = idxPhone >= 0 ? Convert.ToString(rdr[idxPhone] ?? "").Trim() : "";
+                                sGstin.Value = idxGst >= 0 ? Convert.ToString(rdr[idxGst] ?? "").Trim() : "";
+                                upSup.ExecuteNonQuery();
+                                suppliersSynced++;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    sqliteConn.Execute("UPDATE StoreSettings SET NextProductCode = (SELECT COALESCE(MAX(ProductCode), 39031) + 1 FROM Products) WHERE Id = 1;", transaction: tx);
+                    tx.Commit();
+                }
+
+                statusMessage = string.Format(
+                    "Successfully synced from old Shopaid SQL Server ({0}):\n\n" +
+                    "• Medicines / Products : {1}\n" +
+                    "• Active Stock Batches : {2}\n" +
+                    "• Suppliers            : {3}",
+                    connectedServer, productsSynced, batchesSynced, suppliersSynced);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Error while reading old Shopaid database: " + ex.Message;
+                return false;
             }
         }
     }

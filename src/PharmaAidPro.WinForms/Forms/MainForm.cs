@@ -217,7 +217,17 @@ namespace PharmaAidPro.WinForms.Forms
             reportsMenu.DropDownItems.Add("GST Summary", null, delegate { OpenReports(3); });
 
             var maintenanceMenu = new ToolStripMenuItem("&Maintenance");
-            maintenanceMenu.DropDownItems.Add("Backup & Legacy Import", null, delegate { OpenSettingsAndBackup(); });
+            maintenanceMenu.DropDownItems.Add("1-Click Sync Medicines && Stock from Old Shopaid App", null, delegate
+            {
+                Cursor.Current = Cursors.WaitCursor;
+                int p, b, s;
+                string msg;
+                bool ok = _repo.SyncFromLegacyShopaidSqlServer(null, out p, out b, out s, out msg);
+                Cursor.Current = Cursors.Default;
+                UpdateStatusBar();
+                MessageBox.Show(msg, ok ? "Old Shopaid Sync Complete" : "Shopaid Sync Info", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Information);
+            });
+            maintenanceMenu.DropDownItems.Add("Backup && Legacy Import", null, delegate { OpenSettingsAndBackup(); });
 
             var windowsMenu = new ToolStripMenuItem("&Windows");
             var gstMenu = new ToolStripMenuItem("&GST");

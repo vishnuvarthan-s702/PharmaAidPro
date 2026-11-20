@@ -55,16 +55,18 @@ namespace PharmaAidPro.WinForms.Data
         {
             using (var conn = DatabaseInitializer.CreateConnection())
             {
-                var like = "%" + (query ?? string.Empty).Trim() + "%";
+                string q = (query ?? string.Empty).Trim();
+                var prefix = q + "%";
+                var like = "%" + q + "%";
                 return conn.Query<Product>(@"
                     SELECT p.*,
                            COALESCE((SELECT SUM(b.StockBaseUnits) FROM ProductBatches b WHERE b.ProductCode = p.ProductCode), 0) AS TotalStockUnits
                     FROM Products p
-                    WHERE p.ProductName LIKE @Like
-                       OR CAST(p.ProductCode AS TEXT) LIKE @Like
-                       OR COALESCE(p.Salt, '') LIKE @Like
-                    ORDER BY p.ProductName
-                    LIMIT 50", new { Like = like }).ToList();
+                    WHERE p.ProductName LIKE @Prefix
+                       OR p.ProductName LIKE @Like
+                       OR CAST(p.ProductCode AS TEXT) LIKE @Prefix
+                    ORDER BY CASE WHEN p.ProductName LIKE @Prefix THEN 0 ELSE 1 END, p.ProductName
+                    LIMIT 60", new { Prefix = prefix, Like = like }).ToList();
             }
         }
 
@@ -577,6 +579,15 @@ namespace PharmaAidPro.WinForms.Data
                 tx.Commit();
             }
             return count;
+        }
+
+        public bool SyncFromLegacyShopaidSqlServer(string customServer, out int productsSynced, out int batchesSynced, out int suppliersSynced, out string statusMessage)
+        {
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                DatabaseInitializer.LoadBundledCatalogIfNeeded(conn);
+                return DatabaseInitializer.TrySyncFromLocalShopaidSqlServer(conn, customServer, out productsSynced, out batchesSynced, out suppliersSynced, out statusMessage);
+            }
         }
 
         private static int ParseIntOrDefault(string s, int def)

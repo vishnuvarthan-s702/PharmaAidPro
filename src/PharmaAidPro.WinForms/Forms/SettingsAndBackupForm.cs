@@ -31,7 +31,7 @@ namespace PharmaAidPro.WinForms.Forms
         private void InitializeComponent()
         {
             this.Text = "Store Settings, Printer, Backup & Legacy Import";
-            this.Size = new Size(620, 410);
+            this.Size = new Size(620, 465);
             this.StartPosition = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -74,13 +74,27 @@ namespace PharmaAidPro.WinForms.Forms
             var btnBackupNow = new Button { Text = "Backup Database Now", Left = 300, Top = y + 10, Width = 155, Height = 32 };
             btnBackupNow.Click += BtnBackupNow_Click;
 
-            var btnImportCsv = new Button { Text = "Import Products CSV", Left = 160, Top = y + 54, Width = 295, Height = 30 };
+            var btnImportCsv = new Button { Text = "Import Products CSV", Left = 160, Top = y + 52, Width = 295, Height = 30 };
             btnImportCsv.Click += BtnImportCsv_Click;
+
+            var btnSyncOldApp = new Button
+            {
+                Text = "1-Click Sync Live Stock && Medicines from Old Shopaid App",
+                Left = 160,
+                Top = y + 92,
+                Width = 420,
+                Height = 36,
+                BackColor = Color.FromArgb(24, 115, 65),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Tahoma", 9F, FontStyle.Bold)
+            };
+            btnSyncOldApp.Click += BtnSyncOldApp_Click;
 
             var btnClose = new Button { Text = "Close", Left = 490, Top = y + 10, Width = 90, Height = 32 };
             btnClose.Click += delegate { this.Close(); };
 
-            this.Controls.AddRange(new Control[] { btnSave, btnBackupNow, btnImportCsv, btnClose });
+            this.Controls.AddRange(new Control[] { btnSave, btnBackupNow, btnImportCsv, btnSyncOldApp, btnClose });
 
             this.KeyDown += delegate(object s, KeyEventArgs e)
             {
@@ -130,6 +144,17 @@ namespace PharmaAidPro.WinForms.Forms
                 if (SettingsUpdated != null) SettingsUpdated();
                 MessageBox.Show(string.Format("Imported {0} products into SQLite.", imported), "Legacy Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+        }
+
+        private void BtnSyncOldApp_Click(object sender, EventArgs e)
+        {
+            Cursor.Current = Cursors.WaitCursor;
+            int p, b, s;
+            string msg;
+            bool ok = _repo.SyncFromLegacyShopaidSqlServer(null, out p, out b, out s, out msg);
+            Cursor.Current = Cursors.Default;
+            if (SettingsUpdated != null) SettingsUpdated();
+            MessageBox.Show(msg, ok ? "Old Shopaid Sync Complete" : "Shopaid Sync Info", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
         }
     }
 }
