@@ -118,6 +118,10 @@ namespace PharmaAidPro.WinForms.Forms
 
             headerPanel.Controls.Add(new Label { Text = "Invoice Date", Left = 330, Top = 89, Width = 95 });
             _txtInvoiceDate = new TextBox { Left = 430, Top = 86, Width = 130 };
+            _txtInvoiceDate.TextChanged += delegate
+            {
+                _txtPaymentDate.Text = _txtInvoiceDate.Text;
+            };
             headerPanel.Controls.Add(_txtInvoiceDate);
 
             headerPanel.Controls.Add(new Label { Text = "Payment Date", Left = 330, Top = 114, Width = 95 });
@@ -285,7 +289,17 @@ namespace PharmaAidPro.WinForms.Forms
             // Enter navigation across header controls
             AttachEnter(_txtGrnDate, _txtSupplierName);
             AttachEnter(_txtInvoiceNo, _txtInvoiceDate);
-            AttachEnter(_txtInvoiceDate, _txtPaymentDate);
+            _txtInvoiceDate.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    _txtPaymentDate.Text = _txtInvoiceDate.Text;
+                    _txtPaymentDate.Focus();
+                    _txtPaymentDate.SelectAll();
+                }
+            };
             AttachEnter(_txtPaymentDate, _txtAmountPayable);
             AttachEnter(_txtAmountPayable, _txtDiscountPct);
             AttachEnter(_txtDiscountPct, _grid);
