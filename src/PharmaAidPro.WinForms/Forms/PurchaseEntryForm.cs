@@ -81,6 +81,7 @@ namespace PharmaAidPro.WinForms.Forms
             // Row 1: GRN Date & Possible GRN No
             headerPanel.Controls.Add(new Label { Text = "GRN Date", Left = 10, Top = 10, Width = 72 });
             _txtGrnDate = new TextBox { Left = 85, Top = 7, Width = 85 };
+            FullDateMaskHelper.AttachPermanent(_txtGrnDate);
             headerPanel.Controls.Add(_txtGrnDate);
 
             headerPanel.Controls.Add(new Label { Text = "Possible GRN No", Left = 220, Top = 10, Width = 100 });
@@ -118,14 +119,19 @@ namespace PharmaAidPro.WinForms.Forms
 
             headerPanel.Controls.Add(new Label { Text = "Invoice Date", Left = 330, Top = 89, Width = 95 });
             _txtInvoiceDate = new TextBox { Left = 430, Top = 86, Width = 130 };
+            FullDateMaskHelper.AttachPermanent(_txtInvoiceDate);
             _txtInvoiceDate.TextChanged += delegate
             {
-                _txtPaymentDate.Text = _txtInvoiceDate.Text;
+                if (_txtPaymentDate != null)
+                {
+                    _txtPaymentDate.Text = _txtInvoiceDate.Text;
+                }
             };
             headerPanel.Controls.Add(_txtInvoiceDate);
 
             headerPanel.Controls.Add(new Label { Text = "Payment Date", Left = 330, Top = 114, Width = 95 });
             _txtPaymentDate = new TextBox { Left = 430, Top = 111, Width = 130 };
+            FullDateMaskHelper.AttachPermanent(_txtPaymentDate);
             headerPanel.Controls.Add(_txtPaymentDate);
 
             headerPanel.Controls.Add(new Label { Text = "Amount Payable", Left = 330, Top = 139, Width = 95, Font = new Font("Tahoma", 8.5F, FontStyle.Bold) });
@@ -295,9 +301,10 @@ namespace PharmaAidPro.WinForms.Forms
                 {
                     e.Handled = true;
                     e.SuppressKeyPress = true;
+                    _txtInvoiceDate.Text = FullDateMaskHelper.NormalizeDate(_txtInvoiceDate.Text);
                     _txtPaymentDate.Text = _txtInvoiceDate.Text;
                     _txtPaymentDate.Focus();
-                    _txtPaymentDate.SelectAll();
+                    FullDateMaskHelper.SelectFirstSegment(_txtPaymentDate);
                 }
             };
             AttachEnter(_txtPaymentDate, _txtAmountPayable);

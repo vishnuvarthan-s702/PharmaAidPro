@@ -139,7 +139,6 @@ namespace PharmaAidPro.WinForms.Forms
     public static class ExpiryMaskHelper
     {
         private static TextBox _attachedTextBox;
-        private static bool _internalChange;
 
         public static void Attach(TextBox tb)
         {
@@ -147,9 +146,7 @@ namespace PharmaAidPro.WinForms.Forms
             if (tb == null) return;
 
             _attachedTextBox = tb;
-            _internalChange = true;
             tb.Text = NormalizeInitial(tb.Text);
-            _internalChange = false;
 
             tb.KeyDown += Tb_KeyDown;
             tb.KeyPress += Tb_KeyPress;
@@ -242,9 +239,7 @@ namespace PharmaAidPro.WinForms.Forms
             int slash = tb.Text.IndexOf('/');
             if (slash < 0)
             {
-                _internalChange = true;
                 tb.Text = NormalizeInitial(tb.Text);
-                _internalChange = false;
                 slash = tb.Text.IndexOf('/');
             }
 
@@ -273,11 +268,9 @@ namespace PharmaAidPro.WinForms.Forms
                 {
                     // Delete only the selected characters inside the current side (Month or Year)
                     int st = tb.SelectionStart;
-                    _internalChange = true;
                     tb.Text = tb.Text.Remove(st, tb.SelectionLength);
                     tb.SelectionStart = st;
                     tb.SelectionLength = 0;
-                    _internalChange = false;
                     e.SuppressKeyPress = true;
                     e.Handled = true;
                     return;
@@ -296,11 +289,9 @@ namespace PharmaAidPro.WinForms.Forms
                 if (tb.SelectionLength > 0)
                 {
                     int st = tb.SelectionStart;
-                    _internalChange = true;
                     tb.Text = tb.Text.Remove(st, tb.SelectionLength);
                     tb.SelectionStart = st;
                     tb.SelectionLength = 0;
-                    _internalChange = false;
                     e.SuppressKeyPress = true;
                     e.Handled = true;
                     return;
@@ -350,11 +341,9 @@ namespace PharmaAidPro.WinForms.Forms
             if (tb.SelectionLength > 0)
             {
                 int st = tb.SelectionStart;
-                _internalChange = true;
                 tb.Text = tb.Text.Remove(st, tb.SelectionLength);
                 tb.SelectionStart = st;
                 tb.SelectionLength = 0;
-                _internalChange = false;
                 slash = tb.Text.IndexOf('/');
             }
 
@@ -367,29 +356,24 @@ namespace PharmaAidPro.WinForms.Forms
                 if (monthLen < 2)
                 {
                     // Insert digit into Month
-                    _internalChange = true;
                     tb.Text = tb.Text.Insert(pos, e.KeyChar.ToString());
                     tb.SelectionStart = pos + 1;
                     tb.SelectionLength = 0;
-                    _internalChange = false;
                 }
                 else
                 {
                     // Month already has 2 digits: overtype at pos (or if at slash, jump to Year)
                     if (pos < 2)
                     {
-                        _internalChange = true;
                         tb.Text = tb.Text.Remove(pos, 1).Insert(pos, e.KeyChar.ToString());
                         tb.SelectionStart = pos + 1;
                         tb.SelectionLength = 0;
-                        _internalChange = false;
                     }
                     else
                     {
                         // Already typed 2 month digits and at '/' -> type into Year
                         int yearStart = slash + 1;
                         int yearLen = tb.Text.Length - yearStart;
-                        _internalChange = true;
                         if (yearLen > 0)
                         {
                             tb.Text = tb.Text.Substring(0, yearStart) + e.KeyChar.ToString();
@@ -400,7 +384,6 @@ namespace PharmaAidPro.WinForms.Forms
                         }
                         tb.SelectionStart = yearStart + 1;
                         tb.SelectionLength = 0;
-                        _internalChange = false;
                     }
                 }
             }
@@ -410,20 +393,288 @@ namespace PharmaAidPro.WinForms.Forms
                 int yearLen = tb.Text.Length - yearStart;
                 if (yearLen < 2)
                 {
-                    _internalChange = true;
                     tb.Text = tb.Text.Insert(pos, e.KeyChar.ToString());
                     tb.SelectionStart = pos + 1;
                     tb.SelectionLength = 0;
-                    _internalChange = false;
                 }
                 else
                 {
                     int targetPos = pos < tb.Text.Length ? pos : tb.Text.Length - 1;
-                    _internalChange = true;
                     tb.Text = tb.Text.Remove(targetPos, 1).Insert(targetPos, e.KeyChar.ToString());
                     tb.SelectionStart = Math.Min(tb.Text.Length, targetPos + 1);
                     tb.SelectionLength = 0;
-                    _internalChange = false;
+                }
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    public static class FullDateMaskHelper
+    {
+        public static void AttachPermanent(TextBox tb)
+        {
+            if (tb == null) return;
+            tb.Text = NormalizeDate(tb.Text);
+
+            tb.Enter += delegate
+            {
+                tb.BeginInvoke((MethodInvoker)delegate
+                {
+                    if (!tb.IsDisposed)
+                    {
+                        SelectFirstSegment(tb);
+                    }
+                });
+            };
+            tb.MouseUp += Tb_MouseUp;
+            tb.KeyDown += Tb_KeyDown;
+            tb.KeyPress += Tb_KeyPress;
+            tb.Leave += delegate
+            {
+                tb.Text = NormalizeDate(tb.Text);
+            };
+        }
+
+        public static void SelectFirstSegment(TextBox tb)
+        {
+            if (tb == null) return;
+            int s1 = tb.Text.IndexOf('/');
+            if (s1 > 0)
+            {
+                tb.Select(0, s1);
+            }
+        }
+
+        public static string NormalizeDate(string raw)
+        {
+            string today = DateTime.Now.ToString("dd/MM/yy");
+            string s = (raw ?? string.Empty).Trim().Replace("-", "/");
+            if (s.Length == 0) return today;
+
+            string[] parts = s.Split('/');
+            string[] defParts = today.Split('/');
+            string d = parts.Length > 0 ? parts[0].Trim() : defParts[0];
+            string m = parts.Length > 1 ? parts[1].Trim() : defParts[1];
+            string y = parts.Length > 2 ? parts[2].Trim() : defParts[2];
+
+            if (d.Length > 2) d = d.Substring(0, 2);
+            if (m.Length > 2) m = m.Substring(0, 2);
+            if (y.Length > 2) y = y.Substring(y.Length - 2, 2);
+
+            if (d.Length == 1) d = "0" + d;
+            if (d.Length == 0) d = defParts[0];
+            if (m.Length == 1) m = "0" + m;
+            if (m.Length == 0) m = defParts[1];
+            if (y.Length == 1) y = "0" + y;
+            if (y.Length == 0) y = defParts[2];
+
+            return d + "/" + m + "/" + y;
+        }
+
+        private static void EnsureTwoSlashes(TextBox tb, out int s1, out int s2)
+        {
+            s1 = tb.Text.IndexOf('/');
+            s2 = s1 >= 0 ? tb.Text.IndexOf('/', s1 + 1) : -1;
+            if (s1 < 0 || s2 < 0)
+            {
+                tb.Text = NormalizeDate(tb.Text);
+                s1 = tb.Text.IndexOf('/');
+                s2 = tb.Text.IndexOf('/', s1 + 1);
+            }
+        }
+
+        private static void GetSegmentBounds(TextBox tb, int caretPos, out int segIndex, out int segStart, out int segEnd)
+        {
+            int s1, s2;
+            EnsureTwoSlashes(tb, out s1, out s2);
+
+            if (caretPos <= s1)
+            {
+                segIndex = 0;
+                segStart = 0;
+                segEnd = s1;
+            }
+            else if (caretPos <= s2)
+            {
+                segIndex = 1;
+                segStart = s1 + 1;
+                segEnd = s2;
+            }
+            else
+            {
+                segIndex = 2;
+                segStart = s2 + 1;
+                segEnd = tb.Text.Length;
+            }
+        }
+
+        private static void ClampSelectionToSingleSegment(TextBox tb)
+        {
+            if (tb.SelectionLength <= 0) return;
+            int segIdx, segStart, segEnd;
+            GetSegmentBounds(tb, tb.SelectionStart, out segIdx, out segStart, out segEnd);
+            int selEnd = tb.SelectionStart + tb.SelectionLength;
+            if (selEnd > segEnd)
+            {
+                int newLen = Math.Max(0, segEnd - tb.SelectionStart);
+                tb.Select(tb.SelectionStart, newLen);
+            }
+        }
+
+        private static void Tb_MouseUp(object sender, MouseEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+            ClampSelectionToSingleSegment(tb);
+        }
+
+        private static void Tb_KeyDown(object sender, KeyEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            int s1, s2;
+            EnsureTwoSlashes(tb, out s1, out s2);
+
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                int segIdx, segStart, segEnd;
+                GetSegmentBounds(tb, tb.SelectionStart, out segIdx, out segStart, out segEnd);
+                tb.Select(segStart, segEnd - segStart);
+                return;
+            }
+
+            ClampSelectionToSingleSegment(tb);
+            EnsureTwoSlashes(tb, out s1, out s2);
+
+            if (e.KeyCode == Keys.Back)
+            {
+                if (tb.SelectionLength > 0)
+                {
+                    int st = tb.SelectionStart;
+                    tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                    tb.SelectionStart = st;
+                    tb.SelectionLength = 0;
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+
+                // Block Backspace right after either '/' separator
+                if (tb.SelectionStart == s1 + 1 || tb.SelectionStart == s2 + 1)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                if (tb.SelectionLength > 0)
+                {
+                    int st = tb.SelectionStart;
+                    tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                    tb.SelectionStart = st;
+                    tb.SelectionLength = 0;
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+
+                // Block Delete right before either '/' separator
+                if (tb.SelectionStart == s1 || tb.SelectionStart == s2)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        private static void Tb_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            if (char.IsControl(e.KeyChar))
+            {
+                return;
+            }
+
+            int s1, s2;
+            EnsureTwoSlashes(tb, out s1, out s2);
+
+            // Pressing '/' jumps to the next segment (Day -> Month -> Year)
+            if (e.KeyChar == '/')
+            {
+                e.Handled = true;
+                int segIdx, segStart, segEnd;
+                GetSegmentBounds(tb, tb.SelectionStart, out segIdx, out segStart, out segEnd);
+                if (segIdx == 0)
+                {
+                    tb.Select(s1 + 1, s2 - (s1 + 1));
+                }
+                else if (segIdx == 1)
+                {
+                    tb.Select(s2 + 1, tb.Text.Length - (s2 + 1));
+                }
+                return;
+            }
+
+            if (!char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            ClampSelectionToSingleSegment(tb);
+            if (tb.SelectionLength > 0)
+            {
+                int st = tb.SelectionStart;
+                tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                tb.SelectionStart = st;
+                tb.SelectionLength = 0;
+            }
+
+            EnsureTwoSlashes(tb, out s1, out s2);
+            int pos = tb.SelectionStart;
+            int curSeg, curStart, curEnd;
+            GetSegmentBounds(tb, pos, out curSeg, out curStart, out curEnd);
+            int segLen = curEnd - curStart;
+
+            if (segLen < 2)
+            {
+                tb.Text = tb.Text.Insert(pos, e.KeyChar.ToString());
+                tb.SelectionStart = pos + 1;
+                tb.SelectionLength = 0;
+            }
+            else
+            {
+                if (pos < curEnd)
+                {
+                    tb.Text = tb.Text.Remove(pos, 1).Insert(pos, e.KeyChar.ToString());
+                    tb.SelectionStart = pos + 1;
+                    tb.SelectionLength = 0;
+                }
+                else if (curSeg < 2)
+                {
+                    // Current segment is full (2 digits) and caret is at '/' -> type into next segment
+                    int nextStart = curEnd + 1;
+                    int nextEnd = curSeg == 0 ? s2 : tb.Text.Length;
+                    tb.Text = tb.Text.Remove(nextStart, nextEnd - nextStart).Insert(nextStart, e.KeyChar.ToString());
+                    tb.SelectionStart = nextStart + 1;
+                    tb.SelectionLength = 0;
+                }
+                else
+                {
+                    // At the end of Year segment -> overtype last digit
+                    int lastIdx = tb.Text.Length - 1;
+                    tb.Text = tb.Text.Remove(lastIdx, 1) + e.KeyChar.ToString();
+                    tb.SelectionStart = tb.Text.Length;
+                    tb.SelectionLength = 0;
                 }
             }
 
