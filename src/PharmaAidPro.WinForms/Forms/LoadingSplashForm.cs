@@ -57,7 +57,7 @@ namespace PharmaAidPro.WinForms.Forms
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string[] candidates = new[]
             {
-                Path.Combine(baseDir, "Assets", "store_bg.jpg"),
+                Path.Combine(Path.Combine(baseDir, "Assets"), "store_bg.jpg"),
                 Path.Combine(baseDir, "store_bg.jpg"),
                 Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\Assets\store_bg.jpg"))
             };

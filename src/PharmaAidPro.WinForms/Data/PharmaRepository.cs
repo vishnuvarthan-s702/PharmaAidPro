@@ -213,7 +213,7 @@ namespace PharmaAidPro.WinForms.Data
 
         public static string ParseExpiryToSortKey(string mmyy)
         {
-            if (string.IsNullOrWhiteSpace(mmyy)) return "2099-12";
+            if (mmyy == null || mmyy.Trim().Length == 0) return "2099-12";
             var parts = mmyy.Trim().Split('/');
             if (parts.Length == 2)
             {
@@ -403,7 +403,7 @@ namespace PharmaAidPro.WinForms.Data
                         new { line.QtyUnits, line.ProductCode, line.BatchDesc }, tx);
                 }
 
-                if (!string.IsNullOrWhiteSpace(header.CustomerName))
+                if (header.CustomerName != null && header.CustomerName.Trim().Length > 0)
                 {
                     conn.Execute(@"
                         INSERT OR IGNORE INTO Customers (CustomerName, KhataBalance) VALUES (@Name, 0);",
@@ -450,7 +450,7 @@ namespace PharmaAidPro.WinForms.Data
             using (var conn = DatabaseInitializer.CreateConnection())
             {
                 var prod = conn.QuerySingleOrDefault<Product>("SELECT * FROM Products WHERE ProductCode = @Code", new { Code = productCode });
-                if (prod == null || string.IsNullOrWhiteSpace(prod.Salt)) return new List<Product>();
+                if (prod == null || prod.Salt == null || prod.Salt.Trim().Length == 0) return new List<Product>();
 
                 return conn.Query<Product>(@"
                     SELECT p.*,
@@ -490,7 +490,7 @@ namespace PharmaAidPro.WinForms.Data
             }
         }
 
-        public List<dynamic> GetStockAndExpiryReport(int withinMonths)
+        public List<StockExpiryRow> GetStockAndExpiryReport(int withinMonths)
         {
             using (var conn = DatabaseInitializer.CreateConnection())
             {
@@ -498,7 +498,7 @@ namespace PharmaAidPro.WinForms.Data
                     ? System.DateTime.Now.AddMonths(withinMonths).ToString("yyyy-MM")
                     : "9999-12";
 
-                return conn.Query(@"
+                return conn.Query<StockExpiryRow>(@"
                     SELECT p.ProductCode, p.ProductName, b.BatchDesc, b.ExpiryMMYY, b.ExpirySortKey,
                            b.StockBaseUnits, p.SaleUnit, b.Mrp,
                            ROUND((b.StockBaseUnits / CASE WHEN p.SaleUnit > 0 THEN p.SaleUnit ELSE 1 END) * b.Mrp, 2) AS StockValue
@@ -511,7 +511,7 @@ namespace PharmaAidPro.WinForms.Data
 
         public string BackupDatabase(string targetFolder)
         {
-            if (string.IsNullOrWhiteSpace(targetFolder))
+            if (targetFolder == null || targetFolder.Trim().Length == 0)
             {
                 targetFolder = System.IO.Path.Combine(DatabaseInitializer.DataDirectory, "Backups");
             }

@@ -738,7 +738,7 @@ namespace PharmaAidPro.WinForms.Forms
                 _txtSupplierName.Focus();
                 return;
             }
-            if (string.IsNullOrWhiteSpace(_txtInvoiceNo.Text))
+            if (_txtInvoiceNo.Text == null || _txtInvoiceNo.Text.Trim().Length == 0)
             {
                 MessageBox.Show("Please enter Supplier Invoice No.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtInvoiceNo.Focus();

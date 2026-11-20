@@ -22,16 +22,18 @@ namespace PharmaAidPro.Setup
 
             if (args != null && args.Length > 0 && args[0] == "--verify-installer")
             {
-                using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip"))
+                using (Stream res = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.pak"))
                 {
-                    if (stream == null)
+                    if (res == null)
                     {
                         Console.WriteLine("INSTALLER_ERR|NO_PAYLOAD");
                         return 1;
                     }
-                    using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+                    using (GZipStream gz = new GZipStream(res, CompressionMode.Decompress))
+                    using (BinaryReader br = new BinaryReader(gz))
                     {
-                        Console.WriteLine("INSTALLER_OK|Entries=" + archive.Entries.Count + "|Bytes=" + stream.Length);
+                        int count = br.ReadInt32();
+                        Console.WriteLine("INSTALLER_OK|Entries=" + count + "|CompressedBytes=" + res.Length);
                         return 0;
                     }
                 }
@@ -78,110 +80,84 @@ namespace PharmaAidPro.Setup
             }
 
             // Header Banner
-            var headerPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 88,
-                BackColor = Color.FromArgb(20, 62, 108)
-            };
+            Panel headerPanel = new Panel();
+            headerPanel.Dock = DockStyle.Top;
+            headerPanel.Height = 88;
+            headerPanel.BackColor = Color.FromArgb(20, 62, 108);
 
-            var lblTitle = new Label
-            {
-                Text = "The Nethaji Medical Stores",
-                ForeColor = Color.White,
-                Font = new Font("Tahoma", 15.5F, FontStyle.Bold),
-                Bounds = new Rectangle(20, 12, 520, 28)
-            };
+            Label lblTitle = new Label();
+            lblTitle.Text = "The Nethaji Medical Stores";
+            lblTitle.ForeColor = Color.White;
+            lblTitle.Font = new Font("Tahoma", 15.5F, FontStyle.Bold);
+            lblTitle.Bounds = new Rectangle(20, 12, 520, 28);
 
-            var lblSubtitle = new Label
-            {
-                Text = "CHEMIST & DRUGGIST  •  MEENAKSHIPURAM, NAGERCOIL",
-                ForeColor = Color.FromArgb(255, 216, 110),
-                Font = new Font("Tahoma", 8.75F, FontStyle.Bold),
-                Bounds = new Rectangle(22, 42, 520, 18)
-            };
+            Label lblSubtitle = new Label();
+            lblSubtitle.Text = "CHEMIST & DRUGGIST  •  MEENAKSHIPURAM, NAGERCOIL";
+            lblSubtitle.ForeColor = Color.FromArgb(255, 216, 110);
+            lblSubtitle.Font = new Font("Tahoma", 8.75F, FontStyle.Bold);
+            lblSubtitle.Bounds = new Rectangle(22, 42, 520, 18);
 
-            var lblVersion = new Label
-            {
-                Text = "PharmaAid Pro Offline ERP Setup Wizard  |  32-bit (x86) Windows 7 / 10 / 11",
-                ForeColor = Color.FromArgb(205, 226, 248),
-                Font = new Font("Tahoma", 8.25F, FontStyle.Regular),
-                Bounds = new Rectangle(22, 62, 520, 16)
-            };
+            Label lblVersion = new Label();
+            lblVersion.Text = "PharmaAid Pro Offline ERP Setup Wizard  |  Windows 7 (32-bit x86) & Windows 10/11";
+            lblVersion.ForeColor = Color.FromArgb(205, 226, 248);
+            lblVersion.Font = new Font("Tahoma", 8.25F, FontStyle.Regular);
+            lblVersion.Bounds = new Rectangle(22, 62, 520, 16);
 
             headerPanel.Controls.AddRange(new Control[] { lblTitle, lblSubtitle, lblVersion });
 
             // Body Card
-            var card = new Panel
-            {
-                Bounds = new Rectangle(20, 104, 520, 232),
-                BackColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
-            };
+            Panel card = new Panel();
+            card.Bounds = new Rectangle(20, 104, 520, 232);
+            card.BackColor = Color.White;
+            card.BorderStyle = BorderStyle.FixedSingle;
 
-            var lblFolderTitle = new Label
-            {
-                Text = "Installation Folder:",
-                Font = new Font("Tahoma", 9.25F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(28, 48, 76),
-                Bounds = new Rectangle(18, 16, 480, 20)
-            };
+            Label lblFolderTitle = new Label();
+            lblFolderTitle.Text = "Installation Folder:";
+            lblFolderTitle.Font = new Font("Tahoma", 9.25F, FontStyle.Bold);
+            lblFolderTitle.ForeColor = Color.FromArgb(28, 48, 76);
+            lblFolderTitle.Bounds = new Rectangle(18, 16, 480, 20);
 
-            _txtInstallPath = new TextBox
-            {
-                Text = @"C:\PharmaAidPro",
-                Font = new Font("Tahoma", 9.5F, FontStyle.Regular),
-                Bounds = new Rectangle(18, 40, 392, 24)
-            };
+            _txtInstallPath = new TextBox();
+            _txtInstallPath.Text = Directory.Exists(@"D:\") ? @"D:\PharmaAidPro" : @"C:\PharmaAidPro";
+            _txtInstallPath.Font = new Font("Tahoma", 9.5F, FontStyle.Regular);
+            _txtInstallPath.Bounds = new Rectangle(18, 40, 392, 24);
 
-            _btnBrowse = new Button
-            {
-                Text = "Browse...",
-                Bounds = new Rectangle(418, 39, 82, 26),
-                BackColor = Color.FromArgb(230, 236, 245)
-            };
+            _btnBrowse = new Button();
+            _btnBrowse.Text = "Browse...";
+            _btnBrowse.Bounds = new Rectangle(418, 39, 82, 26);
+            _btnBrowse.BackColor = Color.FromArgb(230, 236, 245);
             _btnBrowse.Click += BtnBrowse_Click;
 
-            _chkDesktopShortcut = new CheckBox
-            {
-                Text = "Create Desktop Shortcut (\"The Nethaji Medical Stores - PharmaAid Pro\")",
-                Checked = true,
-                Font = new Font("Tahoma", 9F, FontStyle.Bold),
-                ForeColor = Color.FromArgb(25, 50, 80),
-                Bounds = new Rectangle(18, 80, 480, 22)
-            };
+            _chkDesktopShortcut = new CheckBox();
+            _chkDesktopShortcut.Text = "Create Desktop Shortcut (\"The Nethaji Medical Stores - PharmaAid Pro\")";
+            _chkDesktopShortcut.Checked = true;
+            _chkDesktopShortcut.Font = new Font("Tahoma", 9F, FontStyle.Bold);
+            _chkDesktopShortcut.ForeColor = Color.FromArgb(25, 50, 80);
+            _chkDesktopShortcut.Bounds = new Rectangle(18, 80, 480, 22);
 
-            _chkStartMenuShortcut = new CheckBox
-            {
-                Text = "Create Start Menu Program Shortcut",
-                Checked = true,
-                Font = new Font("Tahoma", 9F, FontStyle.Regular),
-                Bounds = new Rectangle(18, 108, 480, 22)
-            };
+            _chkStartMenuShortcut = new CheckBox();
+            _chkStartMenuShortcut.Text = "Create Start Menu Program Shortcut";
+            _chkStartMenuShortcut.Checked = true;
+            _chkStartMenuShortcut.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+            _chkStartMenuShortcut.Bounds = new Rectangle(18, 108, 480, 22);
 
-            _chkLaunchNow = new CheckBox
-            {
-                Text = "Launch PharmaAid Pro immediately after installation completes",
-                Checked = true,
-                Font = new Font("Tahoma", 9F, FontStyle.Regular),
-                Bounds = new Rectangle(18, 136, 480, 22)
-            };
+            _chkLaunchNow = new CheckBox();
+            _chkLaunchNow.Text = "Launch PharmaAid Pro immediately after installation completes";
+            _chkLaunchNow.Checked = true;
+            _chkLaunchNow.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+            _chkLaunchNow.Bounds = new Rectangle(18, 136, 480, 22);
 
-            _lblStatus = new Label
-            {
-                Text = "Ready to install. Existing database (Data\\PharmaAidPro.db) is always preserved.",
-                ForeColor = Color.FromArgb(60, 85, 115),
-                Font = new Font("Tahoma", 8.5F, FontStyle.Regular),
-                Bounds = new Rectangle(18, 170, 482, 20)
-            };
+            _lblStatus = new Label();
+            _lblStatus.Text = "Ready to install. Existing database (Data\\PharmaAidPro.db) is always preserved.";
+            _lblStatus.ForeColor = Color.FromArgb(60, 85, 115);
+            _lblStatus.Font = new Font("Tahoma", 8.5F, FontStyle.Regular);
+            _lblStatus.Bounds = new Rectangle(18, 170, 482, 20);
 
-            _progressBar = new ProgressBar
-            {
-                Bounds = new Rectangle(18, 194, 482, 22),
-                Minimum = 0,
-                Maximum = 100,
-                Value = 0
-            };
+            _progressBar = new ProgressBar();
+            _progressBar.Bounds = new Rectangle(18, 194, 482, 22);
+            _progressBar.Minimum = 0;
+            _progressBar.Maximum = 100;
+            _progressBar.Value = 0;
 
             card.Controls.AddRange(new Control[]
             {
@@ -190,35 +166,29 @@ namespace PharmaAidPro.Setup
                 _lblStatus, _progressBar
             });
 
-            _btnInstall = new Button
-            {
-                Text = "&Install Now",
-                Bounds = new Rectangle(296, 352, 130, 36),
-                BackColor = Color.FromArgb(24, 115, 65),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Tahoma", 9.75F, FontStyle.Bold)
-            };
+            _btnInstall = new Button();
+            _btnInstall.Text = "&Install Now";
+            _btnInstall.Bounds = new Rectangle(296, 352, 130, 36);
+            _btnInstall.BackColor = Color.FromArgb(24, 115, 65);
+            _btnInstall.ForeColor = Color.White;
+            _btnInstall.FlatStyle = FlatStyle.Flat;
+            _btnInstall.Font = new Font("Tahoma", 9.75F, FontStyle.Bold);
             _btnInstall.Click += BtnInstall_Click;
 
-            _btnCancel = new Button
-            {
-                Text = "Close",
-                Bounds = new Rectangle(436, 352, 104, 36),
-                BackColor = Color.FromArgb(145, 45, 45),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Tahoma", 9F, FontStyle.Bold)
-            };
+            _btnCancel = new Button();
+            _btnCancel.Text = "Close";
+            _btnCancel.Bounds = new Rectangle(436, 352, 104, 36);
+            _btnCancel.BackColor = Color.FromArgb(145, 45, 45);
+            _btnCancel.ForeColor = Color.White;
+            _btnCancel.FlatStyle = FlatStyle.Flat;
+            _btnCancel.Font = new Font("Tahoma", 9F, FontStyle.Bold);
             _btnCancel.Click += delegate { this.Close(); };
 
-            var lblFooterNote = new Label
-            {
-                Text = "Default Login: Admin / SHOPAID",
-                ForeColor = Color.FromArgb(80, 100, 125),
-                Font = new Font("Tahoma", 8.5F, FontStyle.Italic),
-                Bounds = new Rectangle(22, 362, 250, 20)
-            };
+            Label lblFooterNote = new Label();
+            lblFooterNote.Text = "Default Login: Admin / SHOPAID";
+            lblFooterNote.ForeColor = Color.FromArgb(80, 100, 125);
+            lblFooterNote.Font = new Font("Tahoma", 8.5F, FontStyle.Italic);
+            lblFooterNote.Bounds = new Rectangle(22, 362, 250, 20);
 
             this.Controls.AddRange(new Control[]
             {
@@ -228,7 +198,7 @@ namespace PharmaAidPro.Setup
 
         private void BtnBrowse_Click(object sender, EventArgs e)
         {
-            using (var fbd = new FolderBrowserDialog())
+            using (FolderBrowserDialog fbd = new FolderBrowserDialog())
             {
                 fbd.Description = "Select folder to install PharmaAid Pro:";
                 fbd.SelectedPath = _txtInstallPath.Text;
@@ -242,7 +212,7 @@ namespace PharmaAidPro.Setup
         private void BtnInstall_Click(object sender, EventArgs e)
         {
             string targetDir = (_txtInstallPath.Text ?? string.Empty).Trim();
-            if (string.IsNullOrEmpty(targetDir))
+            if (targetDir.Length == 0)
             {
                 MessageBox.Show("Please choose a valid installation folder.", "Setup", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -255,7 +225,7 @@ namespace PharmaAidPro.Setup
                 _txtInstallPath.ReadOnly = true;
 
                 // Stop any running PharmaAidPro instance before overwriting binaries
-                foreach (var proc in Process.GetProcessesByName("PharmaAidPro"))
+                foreach (Process proc in Process.GetProcessesByName("PharmaAidPro"))
                 {
                     try { proc.Kill(); proc.WaitForExit(2000); } catch { }
                 }
@@ -265,31 +235,26 @@ namespace PharmaAidPro.Setup
                     Directory.CreateDirectory(targetDir);
                 }
 
-                using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.zip"))
+                using (Stream res = Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.pak"))
                 {
-                    if (stream == null)
+                    if (res == null)
                     {
                         throw new InvalidOperationException("Embedded application payload was not found.");
                     }
 
-                    using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+                    using (GZipStream gz = new GZipStream(res, CompressionMode.Decompress))
+                    using (BinaryReader br = new BinaryReader(gz))
                     {
-                        int total = archive.Entries.Count;
-                        int current = 0;
-
-                        foreach (var entry in archive.Entries)
+                        int total = br.ReadInt32();
+                        for (int i = 0; i < total; i++)
                         {
-                            current++;
-                            _progressBar.Value = Math.Min(100, (int)Math.Round((current * 90.0) / Math.Max(1, total)));
+                            string relPath = br.ReadString().Replace('/', Path.DirectorySeparatorChar);
+                            int byteLen = br.ReadInt32();
+                            byte[] data = br.ReadBytes(byteLen);
 
-                            string relPath = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                            _progressBar.Value = Math.Min(100, (int)Math.Round(((i + 1) * 90.0) / Math.Max(1, total)));
+
                             string destPath = Path.Combine(targetDir, relPath);
-
-                            if (string.IsNullOrEmpty(entry.Name))
-                            {
-                                Directory.CreateDirectory(destPath);
-                                continue;
-                            }
 
                             // Never overwrite an existing store database
                             if (relPath.EndsWith("PharmaAidPro.db", StringComparison.OrdinalIgnoreCase) && File.Exists(destPath))
@@ -306,11 +271,7 @@ namespace PharmaAidPro.Setup
                             _lblStatus.Text = "Installing: " + relPath;
                             Application.DoEvents();
 
-                            using (var inStream = entry.Open())
-                            using (var outStream = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                            {
-                                inStream.CopyTo(outStream);
-                            }
+                            File.WriteAllBytes(destPath, data);
                         }
                     }
                 }
@@ -357,12 +318,10 @@ namespace PharmaAidPro.Setup
 
                 if (_chkLaunchNow.Checked && File.Exists(exePath))
                 {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = exePath,
-                        WorkingDirectory = targetDir,
-                        UseShellExecute = true
-                    };
+                    ProcessStartInfo psi = new ProcessStartInfo();
+                    psi.FileName = exePath;
+                    psi.WorkingDirectory = targetDir;
+                    psi.UseShellExecute = true;
                     Process.Start(psi);
                 }
 

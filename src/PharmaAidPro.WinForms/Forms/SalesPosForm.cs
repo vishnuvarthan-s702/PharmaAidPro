@@ -168,7 +168,7 @@ namespace PharmaAidPro.WinForms.Forms
                 Left = 930,
                 Top = 8,
                 Width = 175,
-                Checked = string.IsNullOrWhiteSpace(_settings.PrinterName)
+                Checked = (_settings.PrinterName == null || _settings.PrinterName.Trim().Length == 0)
             };
 
             bottomPanel.Controls.AddRange(new Control[]

@@ -303,7 +303,7 @@ namespace PharmaAidPro.WinForms.Forms
                 _txtSaleUnit.Text = _editingProduct.SaleUnit.ToString();
                 _txtSalePrice.Text = _editingProduct.SalePrice.ToString("0.00", CultureInfo.InvariantCulture);
                 _txtMrp.Text = _editingProduct.Mrp.ToString("0.00", CultureInfo.InvariantCulture);
-                _txtHsnCode.Text = string.IsNullOrWhiteSpace(_editingProduct.HsnCode) ? "0" : _editingProduct.HsnCode;
+                _txtHsnCode.Text = (_editingProduct.HsnCode == null || _editingProduct.HsnCode.Trim().Length == 0) ? "0" : _editingProduct.HsnCode;
                 SelectTaxSlab(_editingProduct.TaxPercent);
                 _saleUnitManuallyChanged = _editingProduct.SaleUnit != _editingProduct.PurchaseUnit;
                 _salePriceManuallyChanged = _editingProduct.SalePrice != _editingProduct.Mrp;
@@ -420,9 +420,9 @@ namespace PharmaAidPro.WinForms.Forms
             product.SaleUnit = saleUnit;
             product.SalePrice = salePrice;
             product.Mrp = mrp;
-            product.HsnCode = string.IsNullOrWhiteSpace(_txtHsnCode.Text) ? "0" : _txtHsnCode.Text.Trim();
+            product.HsnCode = (_txtHsnCode.Text == null || _txtHsnCode.Text.Trim().Length == 0) ? "0" : _txtHsnCode.Text.Trim();
             product.TaxPercent = GetSelectedTaxPercent();
-            if (string.IsNullOrWhiteSpace(product.Rack)) product.Rack = "STORE";
+            if (product.Rack == null || product.Rack.Trim().Length == 0) product.Rack = "STORE";
 
             if (_isEditMode)
             {

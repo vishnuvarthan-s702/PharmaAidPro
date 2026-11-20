@@ -144,7 +144,7 @@ namespace PharmaAidPro.WinForms.Forms
 
         private void BtnSave_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(_txtName.Text))
+            if (_txtName.Text == null || _txtName.Text.Trim().Length == 0)
             {
                 MessageBox.Show("Supplier Name is required.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtName.Focus();
@@ -161,7 +161,7 @@ namespace PharmaAidPro.WinForms.Forms
                 Address = _txtAddress.Text.Trim(),
                 Phone = _txtPhone.Text.Trim(),
                 Gstin = _txtGstin.Text.Trim(),
-                StateName = string.IsNullOrWhiteSpace(_txtState.Text) ? "TAMILNADU" : _txtState.Text.Trim(),
+                StateName = (_txtState.Text == null || _txtState.Text.Trim().Length == 0) ? "TAMILNADU" : _txtState.Text.Trim(),
                 OutstandingAmount = outAmt
             };
 

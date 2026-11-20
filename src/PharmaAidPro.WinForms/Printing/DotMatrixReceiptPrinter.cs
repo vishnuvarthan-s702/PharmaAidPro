@@ -94,13 +94,13 @@ namespace PharmaAidPro.WinForms.Printing
         public static bool SendRawTextToPrinter(string printerName, string text, out string error)
         {
             error = null;
-            if (string.IsNullOrWhiteSpace(printerName))
+            if (printerName == null || printerName.Trim().Length == 0)
             {
                 var ps = new PrinterSettings();
                 printerName = ps.PrinterName;
             }
 
-            if (string.IsNullOrWhiteSpace(printerName))
+            if (printerName == null || printerName.Trim().Length == 0)
             {
                 error = "No default printer found.";
                 return false;

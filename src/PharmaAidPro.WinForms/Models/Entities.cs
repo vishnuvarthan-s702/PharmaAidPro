@@ -174,4 +174,17 @@ namespace PharmaAidPro.WinForms.Models
         public string Role { get; set; }
         public int IsActive { get; set; }
     }
+
+    public class StockExpiryRow
+    {
+        public int ProductCode { get; set; }
+        public string ProductName { get; set; }
+        public string BatchDesc { get; set; }
+        public string ExpiryMMYY { get; set; }
+        public string ExpirySortKey { get; set; }
+        public decimal StockBaseUnits { get; set; }
+        public int SaleUnit { get; set; }
+        public decimal Mrp { get; set; }
+        public decimal StockValue { get; set; }
+    }
 }
