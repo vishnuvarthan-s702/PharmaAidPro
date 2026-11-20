@@ -415,6 +415,7 @@ namespace PharmaAidPro.WinForms.Forms
                 _activeProductTextBox.TextChanged -= ActiveProductTextBox_TextChanged;
                 _activeProductTextBox = null;
             }
+            ExpiryMaskHelper.Detach();
 
             if (_grid.CurrentCell != null && _grid.Columns[_grid.CurrentCell.ColumnIndex].Name == "ProductName")
             {
@@ -425,6 +426,11 @@ namespace PharmaAidPro.WinForms.Forms
                     _activeEditRowIndex = _grid.CurrentCell.RowIndex;
                     _activeProductTextBox.TextChanged += ActiveProductTextBox_TextChanged;
                 }
+            }
+            else if (_grid.CurrentCell != null && _grid.Columns[_grid.CurrentCell.ColumnIndex].Name == "Expiry")
+            {
+                _productDropdown.HidePopup();
+                ExpiryMaskHelper.Attach(e.Control as TextBox);
             }
             else
             {

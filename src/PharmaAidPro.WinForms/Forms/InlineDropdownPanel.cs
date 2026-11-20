@@ -135,4 +135,299 @@ namespace PharmaAidPro.WinForms.Forms
             this.Visible = false;
         }
     }
+
+    public static class ExpiryMaskHelper
+    {
+        private static TextBox _attachedTextBox;
+        private static bool _internalChange;
+
+        public static void Attach(TextBox tb)
+        {
+            Detach();
+            if (tb == null) return;
+
+            _attachedTextBox = tb;
+            _internalChange = true;
+            tb.Text = NormalizeInitial(tb.Text);
+            _internalChange = false;
+
+            tb.KeyDown += Tb_KeyDown;
+            tb.KeyPress += Tb_KeyPress;
+            tb.MouseUp += Tb_MouseUp;
+
+            // Override DataGridView's automatic SelectAll() so only the Month (MM) before '/' is selected
+            tb.BeginInvoke((MethodInvoker)delegate
+            {
+                if (_attachedTextBox == tb && !tb.IsDisposed)
+                {
+                    int slash = tb.Text.IndexOf('/');
+                    if (slash > 0)
+                    {
+                        tb.Select(0, slash);
+                    }
+                }
+            });
+        }
+
+        public static void Detach()
+        {
+            if (_attachedTextBox != null)
+            {
+                _attachedTextBox.KeyDown -= Tb_KeyDown;
+                _attachedTextBox.KeyPress -= Tb_KeyPress;
+                _attachedTextBox.MouseUp -= Tb_MouseUp;
+                _attachedTextBox = null;
+            }
+        }
+
+        private static string NormalizeInitial(string raw)
+        {
+            string s = (raw ?? string.Empty).Trim().Replace("-", "/");
+            if (s.Length == 0) return "12/28";
+            int slash = s.IndexOf('/');
+            if (slash < 0)
+            {
+                if (s.Length >= 4)
+                {
+                    return s.Substring(0, 2) + "/" + s.Substring(2, 2);
+                }
+                if (s.Length == 2)
+                {
+                    return s + "/28";
+                }
+                return "12/28";
+            }
+            string m = s.Substring(0, Math.Min(2, slash));
+            string y = slash + 1 < s.Length ? s.Substring(slash + 1, Math.Min(2, s.Length - slash - 1)) : "28";
+            if (m.Length == 1) m = "0" + m;
+            if (m.Length == 0) m = "12";
+            if (y.Length == 1) y = "0" + y;
+            if (y.Length == 0) y = "28";
+            return m + "/" + y;
+        }
+
+        private static void ClampSelectionAwayFromSlash(TextBox tb)
+        {
+            int slash = tb.Text.IndexOf('/');
+            if (slash < 0) return;
+
+            int start = tb.SelectionStart;
+            int len = tb.SelectionLength;
+            if (len > 0 && start <= slash && (start + len) > slash)
+            {
+                // Selection crosses '/' -> restrict selection strictly to the Month part (or Year part)
+                if (start < slash)
+                {
+                    tb.Select(start, slash - start);
+                }
+                else
+                {
+                    tb.Select(slash + 1, tb.Text.Length - (slash + 1));
+                }
+            }
+        }
+
+        private static void Tb_MouseUp(object sender, MouseEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+            ClampSelectionAwayFromSlash(tb);
+        }
+
+        private static void Tb_KeyDown(object sender, KeyEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            int slash = tb.Text.IndexOf('/');
+            if (slash < 0)
+            {
+                _internalChange = true;
+                tb.Text = NormalizeInitial(tb.Text);
+                _internalChange = false;
+                slash = tb.Text.IndexOf('/');
+            }
+
+            // Prevent Ctrl+A from selecting across the '/'
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                e.SuppressKeyPress = true;
+                e.Handled = true;
+                if (tb.SelectionStart <= slash)
+                {
+                    tb.Select(0, slash);
+                }
+                else
+                {
+                    tb.Select(slash + 1, tb.Text.Length - (slash + 1));
+                }
+                return;
+            }
+
+            ClampSelectionAwayFromSlash(tb);
+            slash = tb.Text.IndexOf('/');
+
+            if (e.KeyCode == Keys.Back)
+            {
+                if (tb.SelectionLength > 0)
+                {
+                    // Delete only the selected characters inside the current side (Month or Year)
+                    int st = tb.SelectionStart;
+                    _internalChange = true;
+                    tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                    tb.SelectionStart = st;
+                    tb.SelectionLength = 0;
+                    _internalChange = false;
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+
+                // Never allow Backspace to delete the '/' separator
+                if (tb.SelectionStart == slash + 1)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+            }
+            else if (e.KeyCode == Keys.Delete)
+            {
+                if (tb.SelectionLength > 0)
+                {
+                    int st = tb.SelectionStart;
+                    _internalChange = true;
+                    tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                    tb.SelectionStart = st;
+                    tb.SelectionLength = 0;
+                    _internalChange = false;
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+
+                // Never allow Delete to remove the '/' separator
+                if (tb.SelectionStart == slash)
+                {
+                    e.SuppressKeyPress = true;
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        private static void Tb_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            var tb = sender as TextBox;
+            if (tb == null) return;
+
+            if (char.IsControl(e.KeyChar))
+            {
+                return;
+            }
+
+            int slash = tb.Text.IndexOf('/');
+            if (slash < 0) return;
+
+            // Pressing '/' jumps directly from Month to Year selection
+            if (e.KeyChar == '/')
+            {
+                e.Handled = true;
+                tb.Select(slash + 1, tb.Text.Length - (slash + 1));
+                return;
+            }
+
+            if (!char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            ClampSelectionAwayFromSlash(tb);
+            slash = tb.Text.IndexOf('/');
+
+            // Remove selected digits within the current side first
+            if (tb.SelectionLength > 0)
+            {
+                int st = tb.SelectionStart;
+                _internalChange = true;
+                tb.Text = tb.Text.Remove(st, tb.SelectionLength);
+                tb.SelectionStart = st;
+                tb.SelectionLength = 0;
+                _internalChange = false;
+                slash = tb.Text.IndexOf('/');
+            }
+
+            int pos = tb.SelectionStart;
+            bool inMonth = pos <= slash;
+
+            if (inMonth)
+            {
+                int monthLen = slash;
+                if (monthLen < 2)
+                {
+                    // Insert digit into Month
+                    _internalChange = true;
+                    tb.Text = tb.Text.Insert(pos, e.KeyChar.ToString());
+                    tb.SelectionStart = pos + 1;
+                    tb.SelectionLength = 0;
+                    _internalChange = false;
+                }
+                else
+                {
+                    // Month already has 2 digits: overtype at pos (or if at slash, jump to Year)
+                    if (pos < 2)
+                    {
+                        _internalChange = true;
+                        tb.Text = tb.Text.Remove(pos, 1).Insert(pos, e.KeyChar.ToString());
+                        tb.SelectionStart = pos + 1;
+                        tb.SelectionLength = 0;
+                        _internalChange = false;
+                    }
+                    else
+                    {
+                        // Already typed 2 month digits and at '/' -> type into Year
+                        int yearStart = slash + 1;
+                        int yearLen = tb.Text.Length - yearStart;
+                        _internalChange = true;
+                        if (yearLen > 0)
+                        {
+                            tb.Text = tb.Text.Substring(0, yearStart) + e.KeyChar.ToString();
+                        }
+                        else
+                        {
+                            tb.Text = tb.Text + e.KeyChar.ToString();
+                        }
+                        tb.SelectionStart = yearStart + 1;
+                        tb.SelectionLength = 0;
+                        _internalChange = false;
+                    }
+                }
+            }
+            else
+            {
+                int yearStart = slash + 1;
+                int yearLen = tb.Text.Length - yearStart;
+                if (yearLen < 2)
+                {
+                    _internalChange = true;
+                    tb.Text = tb.Text.Insert(pos, e.KeyChar.ToString());
+                    tb.SelectionStart = pos + 1;
+                    tb.SelectionLength = 0;
+                    _internalChange = false;
+                }
+                else
+                {
+                    int targetPos = pos < tb.Text.Length ? pos : tb.Text.Length - 1;
+                    _internalChange = true;
+                    tb.Text = tb.Text.Remove(targetPos, 1).Insert(targetPos, e.KeyChar.ToString());
+                    tb.SelectionStart = Math.Min(tb.Text.Length, targetPos + 1);
+                    tb.SelectionLength = 0;
+                    _internalChange = false;
+                }
+            }
+
+            e.Handled = true;
+        }
+    }
 }
