@@ -734,7 +734,7 @@ namespace PharmaAidPro.WinForms.Forms
             }
             else
             {
-                string raw = DotMatrixReceiptPrinter.FormatReceiptText(_settings, header, lines);
+                string raw = DotMatrixReceiptPrinter.FormatEscPRawReceipt(_settings, header, lines);
                 string err;
                 if (!DotMatrixReceiptPrinter.SendRawTextToPrinter(_settings.PrinterName, raw, out err))
                 {

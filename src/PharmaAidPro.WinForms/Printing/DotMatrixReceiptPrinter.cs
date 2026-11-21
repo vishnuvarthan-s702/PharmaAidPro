@@ -45,49 +45,103 @@ namespace PharmaAidPro.WinForms.Printing
 
         public static string FormatReceiptText(StoreSettings store, SalesHeader header, List<SalesLine> lines)
         {
+            return BuildReceiptInternal(store, header, lines, false);
+        }
+
+        public static string FormatEscPRawReceipt(StoreSettings store, SalesHeader header, List<SalesLine> lines)
+        {
+            return BuildReceiptInternal(store, header, lines, true);
+        }
+
+        private static string BuildReceiptInternal(StoreSettings store, SalesHeader header, List<SalesLine> lines, bool includeEscP)
+        {
             var sb = new StringBuilder();
-            const int width = 68;
-            string lineSep = new string('-', width);
+            const int width = 64;
+            string margin = "  ";
+            string lineSep = margin + new string('-', width);
 
-            sb.AppendLine(Center("WISH YOU A SPEEDY RECOVERY", width));
-            sb.AppendLine();
-            sb.AppendLine(Center(store.StoreName, width));
-            sb.AppendLine(Center(store.Address, width));
-            sb.AppendLine(string.Format("DLNo :{0,-32} GST No :{1}", Trunc(store.DrugLicenseNo, 31), store.Gstin));
-            sb.AppendLine(lineSep);
-            sb.AppendLine(string.Format("Name   : {0,-28} Bill No  : {1}", Trunc(header.CustomerName ?? string.Empty, 28), header.BillNo));
-            sb.AppendLine(string.Format("Doctor : {0,-28} Bill Date: {1}", Trunc(header.DoctorName ?? string.Empty, 28), header.BillDate));
-            sb.AppendLine(lineSep);
-            sb.AppendLine(" Qty Particulars              Batch No   Exp     Rate     Amount");
-            sb.AppendLine(lineSep);
+            // ESC @ (Reset), ESC 2 (1/6 inch line spacing), SI (0x0F = 17.1 CPI Condensed Mode ON)
+            if (includeEscP)
+            {
+                sb.Append("\x1B@\x1B2\x0F");
+            }
 
+            // Top margin below perforation
+            sb.Append("\r\n\r\n");
+
+            string storeTitle = (store.StoreName ?? "THE NETHAJI MEDICAL STORES").ToUpperInvariant();
+            if (includeEscP)
+            {
+                // Print Store Title in 10 CPI wide mode (0x12 = DC2), centered across 38 columns, then switch back to 17 CPI Condensed (0x0F = SI)
+                sb.Append("\x12");
+                sb.Append(Center(storeTitle, 38));
+                sb.Append("\x0F\r\n");
+            }
+            else
+            {
+                sb.Append(margin + Center(storeTitle, width) + "\r\n");
+            }
+
+            sb.Append(margin + Center(store.Address ?? "No.204/A,Meenakshipuram,Nagercoil-629001", width) + "\r\n");
+            sb.Append(string.Format("{0}DLNo :{1,-31} GST No :{2}\r\n", margin, Trunc(store.DrugLicenseNo, 31), store.Gstin));
+            sb.Append(lineSep + "\r\n");
+            sb.Append(string.Format("{0}Name   :{1,-27} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 27), header.BillNo));
+            sb.Append(string.Format("{0}{1,-35} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
+            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 27)));
+            sb.Append(lineSep + "\r\n");
+            sb.Append(margin + " Qty Particulars            Batch No  Exp     Rate    Amount\r\n");
+            sb.Append(lineSep + "\r\n");
+
+            int printedLines = 0;
             foreach (var item in lines)
             {
                 string qtyStr = item.QtyUnits % 1 == 0
                     ? ((int)item.QtyUnits).ToString().PadLeft(4)
                     : item.QtyUnits.ToString("0.##").PadLeft(4);
 
-                sb.AppendLine(string.Format(
-                    "{0} {1,-24} {2,-9} {3,-6} {4,7:0.00} {5,9:0.00}",
+                sb.Append(string.Format(
+                    "{0}{1} {2,-22} {3,-9} {4,-5} {5,7:0.00} {6,8:0.00}\r\n",
+                    margin,
                     qtyStr,
-                    Trunc(item.ProductName, 24),
+                    Trunc(item.ProductName, 22),
                     Trunc(item.BatchDesc, 9),
-                    Trunc(item.ExpiryMMYY, 6),
+                    Trunc(item.ExpiryMMYY, 5),
                     item.RateMrp,
                     item.LineAmount));
+                printedLines++;
             }
 
-            sb.AppendLine(lineSep);
-            sb.AppendLine(string.Format(
-                "Base : {0:0.00} SGST: {1:0.00} CGST: {2:0.00} GST:{3:0.00}  ROD: {4:0.##}",
-                header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt, header.RoundOff));
-            sb.AppendLine(string.Format(
-                "Total Item : {0}  Total Qty : {1:0.##}  User : {2}",
-                header.TotalItems, header.TotalQty, header.CreatedBy));
-            sb.AppendLine(string.Format("{0,68}", "Bill Amount : " + header.NetAmount.ToString("0.00")));
-            sb.AppendLine(string.Format("{0,68}", "for " + store.StoreName));
-            sb.AppendLine();
-            sb.AppendLine();
+            // Pad item area to at least 9 lines so 6-inch continuous stationery maintains consistent tear-off height
+            const int minItemLines = 9;
+            while (printedLines < minItemLines)
+            {
+                sb.Append("\r\n");
+                printedLines++;
+            }
+
+            sb.Append(lineSep + "\r\n");
+            sb.Append(string.Format(
+                "{0}Base : {1:0.00} SGST: {2:0.00} CGST: {3:0.00} GST:{4:0.00}  ROD: {5:0.##}\r\n",
+                margin, header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt, header.RoundOff));
+            sb.Append(string.Format(
+                "{0}Total Item : {1,-3} Total Qty : {2,-5:0.##} User :{3}\r\n",
+                margin, header.TotalItems, header.TotalQty, header.CreatedBy));
+
+            if (includeEscP)
+            {
+                sb.Append(string.Format("{0}{1,44}\x12{2:0.00}\x0F\r\n", margin, "Bill Amount : ", header.NetAmount));
+            }
+            else
+            {
+                sb.Append(string.Format("{0}{1,64}\r\n", margin, "Bill Amount : " + header.NetAmount.ToString("0.00")));
+            }
+
+            sb.Append(string.Format("{0}{1,64}\r\n", margin, "for " + storeTitle));
+            sb.Append(lineSep + "\r\n");
+            sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
+
+            // Feed 4 blank lines to position perforation at tear bar
+            sb.Append("\r\n\r\n\r\n\r\n");
             return sb.ToString();
         }
 
@@ -104,6 +158,11 @@ namespace PharmaAidPro.WinForms.Printing
             {
                 error = "No default printer found.";
                 return false;
+            }
+
+            if (text != null && !text.StartsWith("\x1B@", StringComparison.Ordinal))
+            {
+                text = "\x1B@\x1B2\x0F" + text;
             }
 
             IntPtr pBytes = Marshal.StringToCoTaskMemAnsi(text);
@@ -174,7 +233,8 @@ namespace PharmaAidPro.WinForms.Printing
                 btnPrint.Click += delegate
                 {
                     string err;
-                    if (SendRawTextToPrinter(store.PrinterName, receipt, out err))
+                    string escPText = FormatEscPRawReceipt(store, header, lines);
+                    if (SendRawTextToPrinter(store.PrinterName, escPText, out err))
                     {
                         MessageBox.Show("Sent to printer!", "Print", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
