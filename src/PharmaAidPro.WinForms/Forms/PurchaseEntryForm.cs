@@ -612,6 +612,17 @@ namespace PharmaAidPro.WinForms.Forms
                     }
                 }
             }
+            else if (colName == "SPrice")
+            {
+                // Auto-sync MRP = SPrice when entering Sale Price
+                decimal sprice = ParseDec(row.Cells["SPrice"].Value);
+                if (sprice > 0)
+                {
+                    string formatted = sprice.ToString("0.00", CultureInfo.InvariantCulture);
+                    row.Cells["SPrice"].Value = formatted;
+                    row.Cells["Mrp"].Value = formatted;
+                }
+            }
             else if (colName == "Mrp")
             {
                 // Auto-sync SPrice = MRP if SPrice is 0

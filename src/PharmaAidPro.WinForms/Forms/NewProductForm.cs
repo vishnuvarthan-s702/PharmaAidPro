@@ -207,6 +207,9 @@ namespace PharmaAidPro.WinForms.Forms
             {
                 if (_suppressAutoSync) return;
                 _salePriceManuallyChanged = true;
+                _suppressAutoSync = true;
+                _txtMrp.Text = _txtSalePrice.Text;
+                _suppressAutoSync = false;
             };
 
             // Keyboard Enter navigation order:
