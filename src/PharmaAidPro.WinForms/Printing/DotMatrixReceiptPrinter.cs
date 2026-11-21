@@ -139,7 +139,7 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(string.Format("{0}{1,64}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
-            sb.Append(margin + Center("ThankYou", width) + "\r\n");
+            sb.Append(margin + Center("THANKYOU", width) + "\r\n");
 
             // Feed 3 blank lines to position perforation at tear bar
             sb.Append("\r\n\r\n\r\n");
