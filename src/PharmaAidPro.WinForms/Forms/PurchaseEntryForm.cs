@@ -532,12 +532,30 @@ namespace PharmaAidPro.WinForms.Forms
             if (_grid.CurrentCell == null) return;
             int rowIdx = _grid.CurrentCell.RowIndex;
             int colIdx = _grid.CurrentCell.ColumnIndex;
+            string colName = _grid.Columns[colIdx].Name;
 
             _grid.EndEdit();
 
             if (_productDropdown != null && _productDropdown.Visible)
             {
                 return;
+            }
+
+            if (colName == "SPrice" || colName == "Mrp")
+            {
+                decimal pprice = ParseDec(_grid.Rows[rowIdx].Cells["PPrice"].Value);
+                decimal sprice = ParseDec(_grid.Rows[rowIdx].Cells["SPrice"].Value);
+                if (sprice <= pprice)
+                {
+                    MessageBox.Show(
+                        string.Format("SPrice ({0:0.00}) is smaller than PPrice ({1:0.00})!\n\nSPrice must always be greater than PPrice.", sprice, pprice),
+                        "Price Validation",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    _grid.CurrentCell = _grid.Rows[rowIdx].Cells["SPrice"];
+                    _grid.BeginEdit(true);
+                    return;
+                }
             }
 
             for (int c = colIdx + 1; c < _grid.Columns.Count; c++)
@@ -843,6 +861,17 @@ namespace PharmaAidPro.WinForms.Forms
                 decimal mrp = ParseDec(row.Cells["Mrp"].Value);
                 decimal sprice = ParseDec(row.Cells["SPrice"].Value);
                 if (sprice <= 0) sprice = mrp;
+                if (sprice <= pprice)
+                {
+                    MessageBox.Show(
+                        string.Format("Row {0}: SPrice ({1:0.00}) is smaller than PPrice ({2:0.00})!\n\nSPrice must always be greater than PPrice.", sno, sprice, pprice),
+                        "Price Validation",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    _grid.CurrentCell = row.Cells["SPrice"];
+                    _grid.BeginEdit(true);
+                    return;
+                }
                 decimal tax = ParseDec(row.Cells["TaxPct"].Value);
                 decimal cost = pprice * (1m + tax / 100m);
 

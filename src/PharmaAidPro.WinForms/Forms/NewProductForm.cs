@@ -218,7 +218,30 @@ namespace PharmaAidPro.WinForms.Forms
             AttachEnterAdvance(_txtPurchaseUnit, _txtPurchasePrice);
             AttachEnterAdvance(_txtPurchasePrice, _txtSaleUnit);
             AttachEnterAdvance(_txtSaleUnit, _txtSalePrice);
-            AttachEnterAdvance(_txtSalePrice, _txtMrp);
+            _txtSalePrice.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    decimal pPrice, sPrice;
+                    decimal.TryParse(_txtPurchasePrice.Text.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out pPrice);
+                    decimal.TryParse(_txtSalePrice.Text.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out sPrice);
+                    if (sPrice <= pPrice)
+                    {
+                        MessageBox.Show(
+                            string.Format("Sale Price ({0:0.00}) is smaller than Purchase Price ({1:0.00})!\n\nSale Price must always be greater than Purchase Price.", sPrice, pPrice),
+                            "Price Validation",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        _txtSalePrice.Focus();
+                        _txtSalePrice.SelectAll();
+                        return;
+                    }
+                    _txtMrp.Focus();
+                    _txtMrp.SelectAll();
+                }
+            };
             AttachEnterAdvance(_txtMrp, _txtHsnCode);
 
             _txtHsnCode.KeyDown += delegate(object s, KeyEventArgs e)
@@ -413,6 +436,18 @@ namespace PharmaAidPro.WinForms.Forms
             if (!decimal.TryParse(_txtSalePrice.Text.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out salePrice) || salePrice <= 0)
             {
                 salePrice = mrp;
+            }
+
+            if (salePrice <= purchasePrice)
+            {
+                MessageBox.Show(
+                    string.Format("Sale Price ({0:0.00}) is smaller than Purchase Price ({1:0.00})!\n\nSale Price must always be greater than Purchase Price.", salePrice, purchasePrice),
+                    "Price Validation",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                _txtSalePrice.Focus();
+                _txtSalePrice.SelectAll();
+                return;
             }
 
             var product = _isEditMode ? _editingProduct : new Product();
