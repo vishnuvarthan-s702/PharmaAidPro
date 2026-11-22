@@ -1,4 +1,7 @@
 using System;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using PharmaAidPro.WinForms.Data;
 using PharmaAidPro.WinForms.Forms;
@@ -7,6 +10,8 @@ namespace PharmaAidPro.WinForms
 {
     internal static class Program
     {
+        [DllImport("shell32.dll")]
+        private static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
         [STAThread]
         private static void Main(string[] args)
         {
@@ -39,6 +44,8 @@ namespace PharmaAidPro.WinForms
                 return;
             }
 
+            RefreshDesktopShortcutIcon();
+
             var repository = new PharmaRepository();
             while (true)
             {
@@ -70,6 +77,40 @@ namespace PharmaAidPro.WinForms
                         break;
                     }
                 }
+            }
+        }
+
+        private static void RefreshDesktopShortcutIcon()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string exePath = Application.ExecutablePath;
+                string iconFile = Path.Combine(Path.Combine(baseDir, "Assets"), "nethaji_logo.ico");
+                if (!File.Exists(iconFile))
+                {
+                    iconFile = Path.Combine(Path.Combine(baseDir, "Assets"), "app.ico");
+                }
+                string iconLoc = File.Exists(iconFile) ? (iconFile + ",0") : (exePath + ",0");
+
+                string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string shortcutPath = Path.Combine(desktopDir, "The Nethaji Medical Stores - PharmaAid Pro.lnk");
+                if (!File.Exists(shortcutPath)) return;
+
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType == null) return;
+                object shell = Activator.CreateInstance(shellType);
+                object shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { shortcutPath });
+                if (shortcut == null) return;
+
+                Type scType = shortcut.GetType();
+                scType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { iconLoc });
+                scType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+
+                SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
+            }
+            catch
+            {
             }
         }
     }

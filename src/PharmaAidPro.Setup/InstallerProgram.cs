@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("The Nethaji Medical Stores - PharmaAid Pro Setup")]
@@ -364,10 +365,25 @@ namespace PharmaAidPro.Setup
             }
         }
 
+        [DllImport("shell32.dll")]
+        private static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);
+
         private static void CreateWindowsShortcut(string shortcutPath, string targetExe, string workingDir, string description)
         {
             try
             {
+                if (File.Exists(shortcutPath))
+                {
+                    try { File.Delete(shortcutPath); } catch { }
+                }
+
+                string iconFile = Path.Combine(Path.Combine(workingDir, "Assets"), "nethaji_logo.ico");
+                if (!File.Exists(iconFile))
+                {
+                    iconFile = Path.Combine(Path.Combine(workingDir, "Assets"), "app.ico");
+                }
+                string iconLoc = File.Exists(iconFile) ? (iconFile + ",0") : (targetExe + ",0");
+
                 Type shellType = Type.GetTypeFromProgID("WScript.Shell");
                 if (shellType == null) return;
                 object shell = Activator.CreateInstance(shellType);
@@ -378,8 +394,17 @@ namespace PharmaAidPro.Setup
                 scType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { targetExe });
                 scType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { workingDir });
                 scType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { description });
-                scType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { targetExe + ",0" });
+                scType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { iconLoc });
                 scType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+
+                // Force Windows 7 / 10 / 11 Explorer shell to refresh desktop shortcut icons immediately
+                try
+                {
+                    SHChangeNotify(0x08000000, 0x0000, IntPtr.Zero, IntPtr.Zero);
+                }
+                catch
+                {
+                }
             }
             catch
             {
