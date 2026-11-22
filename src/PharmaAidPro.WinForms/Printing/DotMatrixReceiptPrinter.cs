@@ -111,8 +111,8 @@ namespace PharmaAidPro.WinForms.Printing
                 printedLines++;
             }
 
-            // Pad item area to at least 9 lines so 6-inch continuous stationery maintains consistent tear-off height
-            const int minItemLines = 9;
+            // Pad item area to at least 2 lines so single-item bills stay compact without a large empty gap
+            const int minItemLines = 2;
             while (printedLines < minItemLines)
             {
                 sb.Append("\r\n");
@@ -141,8 +141,8 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
             sb.Append(margin + Center("THANKYOU", width) + "\r\n");
 
-            // Feed 3 blank lines to position perforation at tear bar
-            sb.Append("\r\n\r\n\r\n");
+            // Feed 8 blank lines so THANKYOU advances past the printer's tear-off blade (which sits ~8 lines above the print head)
+            sb.Append("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
             return sb.ToString();
         }
 
