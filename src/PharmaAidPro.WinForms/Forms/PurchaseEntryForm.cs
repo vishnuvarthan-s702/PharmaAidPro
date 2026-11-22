@@ -530,66 +530,9 @@ namespace PharmaAidPro.WinForms.Forms
                     DeleteCurrentGridRow();
                     return true;
                 }
-                if (keyData == Keys.Back)
-                {
-                    if (ShouldMoveBackwardOnBackspace())
-                    {
-                        MoveToPreviousGridFieldInRow();
-                        return true;
-                    }
-                }
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
-        }
-
-        private bool ShouldMoveBackwardOnBackspace()
-        {
-            if (_grid.CurrentCell == null) return false;
-            string colName = _grid.Columns[_grid.CurrentCell.ColumnIndex].Name;
-            if (colName == "ProductName" && _grid.IsCurrentCellInEditMode)
-            {
-                var tb = _grid.EditingControl as TextBox;
-                if (tb != null && tb.Text.Length > 0 && tb.SelectionLength < tb.Text.Length && tb.SelectionStart > 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private void MoveToPreviousGridFieldInRow()
-        {
-            if (_grid.CurrentCell == null) return;
-            int rowIdx = _grid.CurrentCell.RowIndex;
-            int colIdx = _grid.CurrentCell.ColumnIndex;
-
-            if (_productDropdown != null) _productDropdown.HidePopup();
-            _grid.EndEdit();
-
-            for (int c = colIdx - 1; c >= 0; c--)
-            {
-                if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
-                {
-                    _grid.CurrentCell = _grid.Rows[rowIdx].Cells[c];
-                    _grid.BeginEdit(true);
-                    return;
-                }
-            }
-
-            if (rowIdx > 0)
-            {
-                int prevRow = rowIdx - 1;
-                for (int c = _grid.Columns.Count - 1; c >= 0; c--)
-                {
-                    if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
-                    {
-                        _grid.CurrentCell = _grid.Rows[prevRow].Cells[c];
-                        _grid.BeginEdit(true);
-                        return;
-                    }
-                }
-            }
         }
 
         private void DeleteCurrentGridRow()
