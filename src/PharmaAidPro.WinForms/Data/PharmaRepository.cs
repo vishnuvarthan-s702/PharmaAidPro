@@ -74,12 +74,16 @@ namespace PharmaAidPro.WinForms.Data
         {
             using (var conn = DatabaseInitializer.CreateConnection())
             {
-                var like = "%" + (query ?? string.Empty).Trim() + "%";
+                string q = (query ?? string.Empty).Trim();
+                var prefix = q + "%";
+                var like = "%" + q + "%";
                 return conn.Query<Supplier>(@"
                     SELECT * FROM Suppliers
-                    WHERE SupplierName LIKE @Like OR CAST(SupplierCode AS TEXT) LIKE @Like
-                    ORDER BY SupplierName
-                    LIMIT 50", new { Like = like }).ToList();
+                    WHERE SupplierName LIKE @Prefix
+                       OR SupplierName LIKE @Like
+                       OR CAST(SupplierCode AS TEXT) LIKE @Prefix
+                    ORDER BY CASE WHEN SupplierName LIKE @Prefix THEN 0 ELSE 1 END, SupplierName
+                    LIMIT 200", new { Prefix = prefix, Like = like }).ToList();
             }
         }
 
