@@ -330,13 +330,121 @@ namespace PharmaAidPro.WinForms.Forms
                 }
             }
 
-            if (keyData == Keys.Enter && _grid != null && _grid.CurrentCell != null && (_grid.Focused || _grid.ContainsFocus || _grid.IsCurrentCellInEditMode))
+            if (_grid != null && _grid.CurrentCell != null && (_grid.Focused || _grid.ContainsFocus || _grid.IsCurrentCellInEditMode))
             {
-                MoveToNextGridFieldInRow();
-                return true;
+                if (keyData == Keys.Enter)
+                {
+                    MoveToNextGridFieldInRow();
+                    return true;
+                }
+                if (keyData == Keys.Delete)
+                {
+                    DeleteCurrentGridRow();
+                    return true;
+                }
+                if (keyData == Keys.Back)
+                {
+                    if (ShouldMoveBackwardOnBackspace())
+                    {
+                        MoveToPreviousGridFieldInRow();
+                        return true;
+                    }
+                }
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private bool ShouldMoveBackwardOnBackspace()
+        {
+            if (_grid.CurrentCell == null) return false;
+            string colName = _grid.Columns[_grid.CurrentCell.ColumnIndex].Name;
+            if (colName == "ProductName" && _grid.IsCurrentCellInEditMode)
+            {
+                var tb = _grid.EditingControl as TextBox;
+                if (tb != null && tb.Text.Length > 0 && tb.SelectionLength < tb.Text.Length && tb.SelectionStart > 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void MoveToPreviousGridFieldInRow()
+        {
+            if (_grid.CurrentCell == null) return;
+            int rowIdx = _grid.CurrentCell.RowIndex;
+            int colIdx = _grid.CurrentCell.ColumnIndex;
+
+            if (_productDropdown != null) _productDropdown.HidePopup();
+            _grid.EndEdit();
+
+            for (int c = colIdx - 1; c >= 0; c--)
+            {
+                if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                {
+                    _grid.CurrentCell = _grid.Rows[rowIdx].Cells[c];
+                    _grid.BeginEdit(true);
+                    return;
+                }
+            }
+
+            if (rowIdx > 0)
+            {
+                int prevRow = rowIdx - 1;
+                for (int c = _grid.Columns.Count - 1; c >= 0; c--)
+                {
+                    if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                    {
+                        _grid.CurrentCell = _grid.Rows[prevRow].Cells[c];
+                        _grid.BeginEdit(true);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void DeleteCurrentGridRow()
+        {
+            if (_grid.CurrentCell == null) return;
+            int rowIdx = _grid.CurrentCell.RowIndex;
+
+            if (_productDropdown != null) _productDropdown.HidePopup();
+            _suppressSuggest = true;
+            _grid.CancelEdit();
+            _grid.EndEdit();
+
+            if (!_grid.Rows[rowIdx].IsNewRow && _grid.Rows.Count > 1)
+            {
+                _grid.Rows.RemoveAt(rowIdx);
+            }
+            else
+            {
+                foreach (DataGridViewCell cell in _grid.Rows[rowIdx].Cells)
+                {
+                    if (!cell.ReadOnly || _grid.Columns[cell.ColumnIndex].Name == "PCode" || _grid.Columns[cell.ColumnIndex].Name == "Amount")
+                    {
+                        cell.Value = null;
+                    }
+                }
+            }
+
+            if (_grid.Rows.Count == 0)
+            {
+                _grid.Rows.Add();
+            }
+
+            RenumberRows();
+            RecalculateTotals();
+            UpdateRowStockHint();
+            _suppressSuggest = false;
+
+            int targetRow = Math.Min(rowIdx, _grid.Rows.Count - 1);
+            if (targetRow >= 0 && _grid.Columns.Contains("ProductName"))
+            {
+                _grid.CurrentCell = _grid.Rows[targetRow].Cells["ProductName"];
+                _grid.BeginEdit(true);
+            }
         }
 
         private void MoveToNextGridFieldInRow()
