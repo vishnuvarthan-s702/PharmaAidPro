@@ -205,8 +205,7 @@ namespace PharmaAidPro.WinForms.Forms
 
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Sno", HeaderText = "Sno", ReadOnly = true, FillWeight = 4 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "PCode", HeaderText = "PCode", ReadOnly = true, FillWeight = 7 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Product Name", FillWeight = 20 });
-            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Packing", HeaderText = "Packing", FillWeight = 6 });
+            _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "ProductName", HeaderText = "Product Name", FillWeight = 24 });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Qty", HeaderText = "Qty", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "FreeQty", HeaderText = "Free Qty", FillWeight = 6, DefaultCellStyle = RightStyle() });
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "DiscAmt", HeaderText = "Disc Amt", FillWeight = 7, DefaultCellStyle = RightStyle() });
@@ -668,7 +667,6 @@ namespace PharmaAidPro.WinForms.Forms
         {
             row.Cells["PCode"].Value = p.ProductCode;
             row.Cells["ProductName"].Value = p.ProductName;
-            row.Cells["Packing"].Value = p.PurchaseUnit;
             if (ParseDec(row.Cells["Qty"].Value) <= 0) row.Cells["Qty"].Value = "1";
             if (row.Cells["FreeQty"].Value == null) row.Cells["FreeQty"].Value = "0";
             if (row.Cells["DiscAmt"].Value == null) row.Cells["DiscAmt"].Value = "0.00";
@@ -853,7 +851,7 @@ namespace PharmaAidPro.WinForms.Forms
                     Sno = sno++,
                     ProductCode = pcode,
                     ProductName = Convert.ToString(row.Cells["ProductName"].Value),
-                    Packing = Convert.ToString(row.Cells["Packing"].Value),
+                    Packing = string.Empty,
                     QtyPacks = ParseDec(row.Cells["Qty"].Value),
                     FreeQtyPacks = ParseDec(row.Cells["FreeQty"].Value),
                     DiscountAmt = ParseDec(row.Cells["DiscAmt"].Value),
