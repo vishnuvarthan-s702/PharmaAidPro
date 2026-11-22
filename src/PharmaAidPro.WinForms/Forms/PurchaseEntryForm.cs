@@ -219,6 +219,7 @@ namespace PharmaAidPro.WinForms.Forms
             _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mrp", HeaderText = "MRP", FillWeight = 8, DefaultCellStyle = RightStyle() });
 
             _grid.RowsAdded += delegate { RenumberRows(); };
+            _grid.CellBeginEdit += Grid_CellBeginEdit;
             _grid.EditingControlShowing += Grid_EditingControlShowing;
             _grid.CellEndEdit += Grid_CellEndEdit;
             _grid.SelectionChanged += delegate { UpdateSelectedRowMarginPanel(); };
@@ -307,8 +308,38 @@ namespace PharmaAidPro.WinForms.Forms
                 }
             };
             AttachEnter(_txtPaymentDate, _txtAmountPayable);
-            AttachEnter(_txtAmountPayable, _txtDiscountPct);
-            AttachEnter(_txtDiscountPct, _grid);
+            _txtAmountPayable.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (!EnsureAmountPayableFilled())
+                    {
+                        return;
+                    }
+                    _txtDiscountPct.Focus();
+                    _txtDiscountPct.SelectAll();
+                }
+            };
+            _txtDiscountPct.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (!EnsureAmountPayableFilled())
+                    {
+                        return;
+                    }
+                    _grid.Focus();
+                    if (_grid.Rows.Count > 0 && _grid.Columns.Contains("ProductName"))
+                    {
+                        _grid.CurrentCell = _grid.Rows[0].Cells["ProductName"];
+                        _grid.BeginEdit(true);
+                    }
+                }
+            };
 
             this.KeyDown += delegate(object s, KeyEventArgs e)
             {
@@ -425,6 +456,34 @@ namespace PharmaAidPro.WinForms.Forms
                         _txtInvoiceNo.Focus();
                     }
                 }
+            }
+        }
+
+        private bool EnsureAmountPayableFilled()
+        {
+            if (ParseDec(_txtAmountPayable.Text) <= 0m)
+            {
+                MessageBox.Show(
+                    "Please enter the Amount Payable (below Payment Date) before entering products.",
+                    "Amount Payable Required",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                _txtAmountPayable.Focus();
+                _txtAmountPayable.SelectAll();
+                return false;
+            }
+            return true;
+        }
+
+        private void Grid_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            if (ParseDec(_txtAmountPayable.Text) <= 0m)
+            {
+                e.Cancel = true;
+                BeginInvoke((MethodInvoker)delegate
+                {
+                    EnsureAmountPayableFilled();
+                });
             }
         }
 
