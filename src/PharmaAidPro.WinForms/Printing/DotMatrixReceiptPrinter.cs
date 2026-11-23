@@ -120,16 +120,20 @@ namespace PharmaAidPro.WinForms.Printing
             }
 
             sb.Append(lineSep + "\r\n");
+
+            // Line 1 below divider: Base/SGST/CGST/GST compactly on the left, Bill Amount moved 1 step up on the right under Amount column
+            string taxLeft = string.Format(
+                "Base:{0:0.00} SGST:{1:0.00} CGST:{2:0.00} GST:{3:0.00}",
+                header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt);
+            if (taxLeft.Length > 38) taxLeft = taxLeft.Substring(0, 38);
+            taxLeft = taxLeft.PadRight(38);
+            sb.Append(string.Format("{0}{1} Bill Amount :{2,8:0.00}\r\n", margin, taxLeft, header.NetAmount));
+
+            // Line 2 below divider: Total Item, Total Qty, ROD
             sb.Append(string.Format(
-                "{0}Base : {1:0.00} SGST: {2:0.00} CGST: {3:0.00} GST:{4:0.00}  ROD: {5:0.##}\r\n",
-                margin, header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt, header.RoundOff));
+                "{0}Total Item : {1,-4} Total Qty : {2,-6:0.##} ROD : {3:0.##}\r\n",
+                margin, header.TotalItems, header.TotalQty, header.RoundOff));
 
-            string leftTotals = string.Format("Total Item : {0,-4} Total Qty : {1:0.##}", header.TotalItems, header.TotalQty);
-            if (leftTotals.Length > 38) leftTotals = leftTotals.Substring(0, 38);
-            leftTotals = leftTotals.PadRight(38);
-
-            // Bill Amount value occupies columns 53..60, directly under the Amount column (columns 53..60) of the item list
-            sb.Append(string.Format("{0}{1}Bill Amount :{2,9:0.00}\r\n", margin, leftTotals, header.NetAmount));
             sb.Append(string.Format("{0}{1,60}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
