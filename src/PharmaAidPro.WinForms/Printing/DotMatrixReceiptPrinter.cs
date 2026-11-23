@@ -121,19 +121,31 @@ namespace PharmaAidPro.WinForms.Printing
 
             sb.Append(lineSep + "\r\n");
 
-            // Line 1 below divider: Base/SGST/CGST/GST compactly on the left, Bill Amount moved 1 step up on the right under Amount column
-            string taxLeft = string.Format(
-                "Base:{0:0.00} SGST:{1:0.00} CGST:{2:0.00} GST:{3:0.00}",
-                header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt);
-            if (taxLeft.Length > 38) taxLeft = taxLeft.Substring(0, 38);
-            taxLeft = taxLeft.PadRight(38);
-            sb.Append(string.Format("{0}{1} Bill Amount :{2,8:0.00}\r\n", margin, taxLeft, header.NetAmount));
+            // Row 1 below divider: Base / SGST / CGST neatly on the left; bold Bill Amount on the right under Amount column
+            string taxLine1 = string.Format(
+                "Base:{0:0.00} SGST:{1:0.00} CGST:{2:0.00}",
+                header.BaseAmt, header.SgstAmt, header.CgstAmt);
+            if (taxLine1.Length > 37) taxLine1 = taxLine1.Substring(0, 37);
+            taxLine1 = taxLine1.PadRight(37);
 
-            // Line 2 below divider: Total Item, Total Qty, ROD
-            sb.Append(string.Format(
-                "{0}Total Item : {1,-4} Total Qty : {2,-6:0.##} ROD : {3:0.##}\r\n",
-                margin, header.TotalItems, header.TotalQty, header.RoundOff));
+            string billAmtBlock = string.Format("Bill Amount : {0:0.00}", header.NetAmount).PadLeft(23);
+            if (includeEscP)
+            {
+                // ESC E (\x1BE) turns Bold ON without changing 17-CPI character width; ESC F (\x1BF) turns Bold OFF
+                sb.Append(string.Format("{0}{1}\x1BE{2}\x1BF\r\n", margin, taxLine1, billAmtBlock));
+            }
+            else
+            {
+                sb.Append(string.Format("{0}{1}{2}\r\n", margin, taxLine1, billAmtBlock));
+            }
 
+            // Row 2 below divider: GST, ROD, Items, and Qty all grouped neatly on the left (leaving space below Bill Amount empty)
+            string taxLine2 = string.Format(
+                "GST :{0:0.00}  ROD:{1:0.00}  Items:{2}  Qty:{3:0.##}",
+                header.TotalGstAmt, header.RoundOff, header.TotalItems, header.TotalQty);
+            sb.Append(margin + taxLine2 + "\r\n");
+
+            // Row 3 below divider: Store signature right-aligned
             sb.Append(string.Format("{0}{1,60}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
