@@ -56,7 +56,7 @@ namespace PharmaAidPro.WinForms.Printing
         private static string BuildReceiptInternal(StoreSettings store, SalesHeader header, List<SalesLine> lines, bool includeEscP)
         {
             var sb = new StringBuilder();
-            const int width = 64;
+            const int width = 60;
             string margin = "  ";
             string lineSep = margin + new string('-', width);
 
@@ -72,9 +72,9 @@ namespace PharmaAidPro.WinForms.Printing
             string storeTitle = (store.StoreName ?? "THE NETHAJI MEDICAL STORES").ToUpperInvariant();
             if (includeEscP)
             {
-                // Print Store Title in 10 CPI wide mode (0x12 = DC2), centered across 38 columns, then switch back to 17 CPI Condensed (0x0F = SI)
+                // Print Store Title in 10 CPI wide mode (0x12 = DC2), centered across 36 columns, then switch back to 17 CPI Condensed (0x0F = SI)
                 sb.Append("\x12");
-                sb.Append(Center(storeTitle, 38));
+                sb.Append(Center(storeTitle, 36));
                 sb.Append("\x0F\r\n");
             }
             else
@@ -83,11 +83,11 @@ namespace PharmaAidPro.WinForms.Printing
             }
 
             sb.Append(margin + Center(store.Address ?? "No.204/A,Meenakshipuram,Nagercoil-629001", width) + "\r\n");
-            sb.Append(string.Format("{0}DLNo :{1,-31} GST No :{2}\r\n", margin, Trunc(store.DrugLicenseNo, 31), store.Gstin));
+            sb.Append(string.Format("{0}DLNo :{1,-29} GST No :{2}\r\n", margin, Trunc(store.DrugLicenseNo, 29), store.Gstin));
             sb.Append(lineSep + "\r\n");
-            sb.Append(string.Format("{0}Name   :{1,-27} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 27), header.BillNo));
-            sb.Append(string.Format("{0}{1,-35} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
-            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 27)));
+            sb.Append(string.Format("{0}Name   :{1,-24} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 24), header.BillNo));
+            sb.Append(string.Format("{0}{1,-32} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
+            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 24)));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + " Qty Particulars            Batch No  Exp     Rate    Amount\r\n");
             sb.Append(lineSep + "\r\n");
@@ -123,20 +123,14 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(string.Format(
                 "{0}Base : {1:0.00} SGST: {2:0.00} CGST: {3:0.00} GST:{4:0.00}  ROD: {5:0.##}\r\n",
                 margin, header.BaseAmt, header.SgstAmt, header.CgstAmt, header.TotalGstAmt, header.RoundOff));
-            sb.Append(string.Format(
-                "{0}Total Item : {1,-3} Total Qty : {2,-5:0.##} User :{3}\r\n",
-                margin, header.TotalItems, header.TotalQty, header.CreatedBy));
 
-            if (includeEscP)
-            {
-                sb.Append(string.Format("{0}{1,44}\x12{2:0.00}\x0F\r\n", margin, "Bill Amount : ", header.NetAmount));
-            }
-            else
-            {
-                sb.Append(string.Format("{0}{1,64}\r\n", margin, "Bill Amount : " + header.NetAmount.ToString("0.00")));
-            }
+            string leftTotals = string.Format("Total Item : {0,-4} Total Qty : {1:0.##}", header.TotalItems, header.TotalQty);
+            if (leftTotals.Length > 38) leftTotals = leftTotals.Substring(0, 38);
+            leftTotals = leftTotals.PadRight(38);
 
-            sb.Append(string.Format("{0}{1,64}\r\n", margin, "for " + storeTitle));
+            // Bill Amount value occupies columns 53..60, directly under the Amount column (columns 53..60) of the item list
+            sb.Append(string.Format("{0}{1}Bill Amount :{2,9:0.00}\r\n", margin, leftTotals, header.NetAmount));
+            sb.Append(string.Format("{0}{1,60}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
             sb.Append(margin + Center("THANKYOU", width) + "\r\n");
