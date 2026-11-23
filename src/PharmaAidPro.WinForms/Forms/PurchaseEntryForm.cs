@@ -177,6 +177,10 @@ namespace PharmaAidPro.WinForms.Forms
             headerPanel.Controls.Add(new Label { Text = "Coin Adj.", Left = 590, Top = 139, Width = 85 });
             _txtCoinAdj = new TextBox { Left = 680, Top = 136, Width = 110, TextAlign = HorizontalAlignment.Right, Text = "0.00" };
             _txtCoinAdj.TextChanged += delegate { RecalculateAll(); };
+            AttachAutoReplaceOnClickAndFocus(_txtCoinAdj);
+            AttachAutoReplaceOnClickAndFocus(_txtAmountPayable);
+            AttachAutoReplaceOnClickAndFocus(_txtDiscountPct);
+            AttachAutoReplaceOnClickAndFocus(_txtDiscountAmt);
             headerPanel.Controls.Add(_txtCoinAdj);
 
             var btnNewProdTop = new Button
@@ -363,6 +367,57 @@ namespace PharmaAidPro.WinForms.Forms
         private static DataGridViewCellStyle RightStyle()
         {
             return new DataGridViewCellStyle { Alignment = DataGridViewContentAlignment.MiddleRight };
+        }
+
+        private static void AttachAutoReplaceOnClickAndFocus(TextBox tb)
+        {
+            if (tb == null) return;
+            bool replaceOnNextChar = false;
+
+            tb.Enter += delegate
+            {
+                replaceOnNextChar = true;
+                tb.BeginInvoke((MethodInvoker)delegate
+                {
+                    if (!tb.IsDisposed) tb.SelectAll();
+                });
+            };
+
+            tb.MouseUp += delegate
+            {
+                tb.SelectAll();
+                replaceOnNextChar = true;
+            };
+
+            tb.KeyPress += delegate(object s, KeyPressEventArgs e)
+            {
+                if (!char.IsControl(e.KeyChar) && replaceOnNextChar)
+                {
+                    replaceOnNextChar = false;
+                    tb.Text = e.KeyChar.ToString();
+                    tb.SelectionStart = tb.Text.Length;
+                    tb.SelectionLength = 0;
+                    e.Handled = true;
+                }
+            };
+
+            tb.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Left || e.KeyCode == Keys.Right || e.KeyCode == Keys.Home || e.KeyCode == Keys.End)
+                {
+                    replaceOnNextChar = false;
+                }
+                else if (e.KeyCode == Keys.Back || e.KeyCode == Keys.Delete)
+                {
+                    if (replaceOnNextChar)
+                    {
+                        replaceOnNextChar = false;
+                        tb.Text = string.Empty;
+                        e.Handled = true;
+                        e.SuppressKeyPress = true;
+                    }
+                }
+            };
         }
 
         private static void AttachEnter(Control current, Control next)
