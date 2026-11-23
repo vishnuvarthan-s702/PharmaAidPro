@@ -56,14 +56,17 @@ namespace PharmaAidPro.WinForms.Printing
         private static string BuildReceiptInternal(StoreSettings store, SalesHeader header, List<SalesLine> lines, bool includeEscP)
         {
             var sb = new StringBuilder();
-            const int width = 60;
-            string margin = "  ";
+            const string ESC = "\x1B";
+            const string BOLD_ON = ESC + "E" + ESC + "G";   // Emphasized + Double-Strike (bold & darker)
+            const string BOLD_OFF = ESC + "H" + ESC + "F";  // Double-Strike OFF + Emphasized OFF
+            const int width = 76;
+            string margin = " ";
             string lineSep = margin + new string('-', width);
 
             // ESC @ (Reset), ESC 2 (1/6 inch line spacing), SI (0x0F = 17.1 CPI Condensed Mode ON)
             if (includeEscP)
             {
-                sb.Append("\x1B@\x1B2\x0F");
+                sb.Append(ESC + "@" + ESC + "2\x0F");
             }
 
             // Top margin below perforation
@@ -72,10 +75,11 @@ namespace PharmaAidPro.WinForms.Printing
             string storeTitle = (store.StoreName ?? "THE NETHAJI MEDICAL STORES").ToUpperInvariant();
             if (includeEscP)
             {
-                // Print Store Title in 10 CPI wide mode (0x12 = DC2), centered across 36 columns, then switch back to 17 CPI Condensed (0x0F = SI)
-                sb.Append("\x12");
-                sb.Append(Center(storeTitle, 36));
-                sb.Append("\x0F\r\n");
+                // Print Store Title in 10 CPI wide mode (0x12 = DC2) with Emphasized + Double-Strike (bold & darker),
+                // centered across 45 columns (~4.50 in, matching 77 condensed columns), then restore Condensed (0x0F)
+                sb.Append("\x12" + BOLD_ON);
+                sb.Append(Center(storeTitle, 45));
+                sb.Append(BOLD_OFF + "\x0F\r\n");
             }
             else
             {
@@ -83,13 +87,20 @@ namespace PharmaAidPro.WinForms.Printing
             }
 
             sb.Append(margin + Center(store.Address ?? "No.204/A,Meenakshipuram,Nagercoil-629001", width) + "\r\n");
-            sb.Append(string.Format("{0}DLNo :{1,-29} GST No :{2}\r\n", margin, Trunc(store.DrugLicenseNo, 29), store.Gstin));
+
+            string dlPart = "DLNo :" + Trunc(store.DrugLicenseNo, 44);
+            string gstPart = "GST No :" + (store.Gstin ?? string.Empty);
+            int dlPad = Math.Max(dlPart.Length + 1, width - gstPart.Length);
+            sb.Append(margin + dlPart.PadRight(dlPad) + gstPart + "\r\n");
+
             sb.Append(lineSep + "\r\n");
-            sb.Append(string.Format("{0}Name   :{1,-24} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 24), header.BillNo));
-            sb.Append(string.Format("{0}{1,-32} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
-            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 24)));
+            sb.Append(string.Format("{0}Name   :{1,-38} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 38), header.BillNo));
+            sb.Append(string.Format("{0}{1,-46} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
+            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 38)));
             sb.Append(lineSep + "\r\n");
-            sb.Append(margin + " Qty Particulars            Batch No  Exp     Rate    Amount\r\n");
+            sb.Append(string.Format(
+                "{0}{1,4} {2,-31} {3,-12} {4,-6} {5,9} {6,9}\r\n",
+                margin, "Qty", "Particulars", "Batch No", "Exp", "Rate", "Amount"));
             sb.Append(lineSep + "\r\n");
 
             int printedLines = 0;
@@ -100,12 +111,12 @@ namespace PharmaAidPro.WinForms.Printing
                     : item.QtyUnits.ToString("0.##").PadLeft(4);
 
                 sb.Append(string.Format(
-                    "{0}{1} {2,-22} {3,-9} {4,-5} {5,7:0.00} {6,8:0.00}\r\n",
+                    "{0}{1} {2,-31} {3,-12} {4,-6} {5,9:0.00} {6,9:0.00}\r\n",
                     margin,
                     qtyStr,
-                    Trunc(item.ProductName, 22),
-                    Trunc(item.BatchDesc, 9),
-                    Trunc(item.ExpiryMMYY, 5),
+                    Trunc(item.ProductName, 31),
+                    Trunc(item.BatchDesc, 12),
+                    Trunc(item.ExpiryMMYY, 6),
                     item.RateMrp,
                     item.LineAmount));
                 printedLines++;
@@ -123,16 +134,16 @@ namespace PharmaAidPro.WinForms.Printing
 
             // Row 1 below divider: Base / SGST / CGST neatly on the left; bold Bill Amount on the right under Amount column
             string taxLine1 = string.Format(
-                "Base:{0:0.00} SGST:{1:0.00} CGST:{2:0.00}",
+                "Base:{0:0.00}  SGST:{1:0.00}  CGST:{2:0.00}",
                 header.BaseAmt, header.SgstAmt, header.CgstAmt);
-            if (taxLine1.Length > 37) taxLine1 = taxLine1.Substring(0, 37);
-            taxLine1 = taxLine1.PadRight(37);
+            if (taxLine1.Length > 50) taxLine1 = taxLine1.Substring(0, 50);
+            taxLine1 = taxLine1.PadRight(50);
 
-            string billAmtBlock = string.Format("Bill Amount : {0:0.00}", header.NetAmount).PadLeft(23);
+            string billAmtBlock = string.Format("Bill Amount : {0:0.00}", header.NetAmount).PadLeft(26);
             if (includeEscP)
             {
-                // ESC E (\x1BE) turns Bold ON without changing 17-CPI character width; ESC F (\x1BF) turns Bold OFF
-                sb.Append(string.Format("{0}{1}\x1BE{2}\x1BF\r\n", margin, taxLine1, billAmtBlock));
+                // Proper ESC E + ESC G (bold & darker) without C# hex escape collision (\x1BE bug)
+                sb.Append(string.Format("{0}{1}{2}{3}{4}\r\n", margin, taxLine1, BOLD_ON, billAmtBlock, BOLD_OFF));
             }
             else
             {
@@ -146,7 +157,7 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(margin + taxLine2 + "\r\n");
 
             // Row 3 below divider: Store signature right-aligned
-            sb.Append(string.Format("{0}{1,60}\r\n", margin, "for " + storeTitle));
+            sb.Append(string.Format("{0}{1,76}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
             sb.Append(margin + Center("THANKYOU", width) + "\r\n");
@@ -224,7 +235,7 @@ namespace PharmaAidPro.WinForms.Printing
             using (var form = new Form())
             {
                 form.Text = "Receipt Preview - " + header.BillNo;
-                form.Size = new Size(640, 520);
+                form.Size = new Size(720, 520);
                 form.StartPosition = FormStartPosition.CenterParent;
                 form.KeyPreview = true;
 
