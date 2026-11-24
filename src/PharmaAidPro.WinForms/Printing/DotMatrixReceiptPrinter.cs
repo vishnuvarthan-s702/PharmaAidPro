@@ -57,10 +57,12 @@ namespace PharmaAidPro.WinForms.Printing
         {
             var sb = new StringBuilder();
             const string ESC = "\x1B";
-            const string BOLD_ON = ESC + "E" + ESC + "G";   // Emphasized + Double-Strike (bold & darker)
-            const string BOLD_OFF = ESC + "H" + ESC + "F";  // Double-Strike OFF + Emphasized OFF
-            const int width = 76;
-            string margin = " ";
+            const string TITLE_BOLD_ON = ESC + "E" + ESC + "G";   // Emphasized + Double-Strike for 10-CPI Shop Name (bold & dark)
+            const string TITLE_BOLD_OFF = ESC + "H" + ESC + "F";  // Double-Strike OFF + Emphasized OFF
+            const string AMT_BOLD_ON = ESC + "G";                 // Double-Strike only for 17-CPI Bill Amount (clean & crisp, no smudging)
+            const string AMT_BOLD_OFF = ESC + "H";
+            const int width = 66;
+            string margin = "  ";
             string lineSep = margin + new string('-', width);
 
             // ESC @ (Reset), ESC 2 (1/6 inch line spacing), SI (0x0F = 17.1 CPI Condensed Mode ON)
@@ -76,10 +78,10 @@ namespace PharmaAidPro.WinForms.Printing
             if (includeEscP)
             {
                 // Print Store Title in 10 CPI wide mode (0x12 = DC2) with Emphasized + Double-Strike (bold & darker),
-                // centered across 45 columns (~4.50 in, matching 77 condensed columns), then restore Condensed (0x0F)
-                sb.Append("\x12" + BOLD_ON);
-                sb.Append(Center(storeTitle, 45));
-                sb.Append(BOLD_OFF + "\x0F\r\n");
+                // centered across 40 columns (~4.00 in, matching 2 + 66 = 68 condensed columns between tractor holes)
+                sb.Append("\x12" + TITLE_BOLD_ON);
+                sb.Append(Center(storeTitle, 40));
+                sb.Append(TITLE_BOLD_OFF + "\x0F\r\n");
             }
             else
             {
@@ -88,18 +90,18 @@ namespace PharmaAidPro.WinForms.Printing
 
             sb.Append(margin + Center(store.Address ?? "No.204/A,Meenakshipuram,Nagercoil-629001", width) + "\r\n");
 
-            string dlPart = "DLNo :" + Trunc(store.DrugLicenseNo, 44);
+            string dlPart = "DLNo :" + Trunc(store.DrugLicenseNo, 36);
             string gstPart = "GST No :" + (store.Gstin ?? string.Empty);
             int dlPad = Math.Max(dlPart.Length + 1, width - gstPart.Length);
             sb.Append(margin + dlPart.PadRight(dlPad) + gstPart + "\r\n");
 
             sb.Append(lineSep + "\r\n");
-            sb.Append(string.Format("{0}Name   :{1,-38} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 38), header.BillNo));
-            sb.Append(string.Format("{0}{1,-46} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
-            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 38)));
+            sb.Append(string.Format("{0}Name   :{1,-30} Bill No  :{2}\r\n", margin, Trunc(header.CustomerName ?? string.Empty, 30), header.BillNo));
+            sb.Append(string.Format("{0}{1,-38} Bill Date:{2}\r\n", margin, string.Empty, header.BillDate));
+            sb.Append(string.Format("{0}Doctor :{1}\r\n", margin, Trunc(header.DoctorName ?? string.Empty, 30)));
             sb.Append(lineSep + "\r\n");
             sb.Append(string.Format(
-                "{0}{1,4} {2,-31} {3,-12} {4,-6} {5,9} {6,9}\r\n",
+                "{0}{1,4} {2,-24} {3,-10} {4,-6} {5,8} {6,9}\r\n",
                 margin, "Qty", "Particulars", "Batch No", "Exp", "Rate", "Amount"));
             sb.Append(lineSep + "\r\n");
 
@@ -111,11 +113,11 @@ namespace PharmaAidPro.WinForms.Printing
                     : item.QtyUnits.ToString("0.##").PadLeft(4);
 
                 sb.Append(string.Format(
-                    "{0}{1} {2,-31} {3,-12} {4,-6} {5,9:0.00} {6,9:0.00}\r\n",
+                    "{0}{1} {2,-24} {3,-10} {4,-6} {5,8:0.00} {6,9:0.00}\r\n",
                     margin,
                     qtyStr,
-                    Trunc(item.ProductName, 31),
-                    Trunc(item.BatchDesc, 12),
+                    Trunc(item.ProductName, 24),
+                    Trunc(item.BatchDesc, 10),
                     Trunc(item.ExpiryMMYY, 6),
                     item.RateMrp,
                     item.LineAmount));
@@ -132,18 +134,18 @@ namespace PharmaAidPro.WinForms.Printing
 
             sb.Append(lineSep + "\r\n");
 
-            // Row 1 below divider: Base / SGST / CGST neatly on the left; bold Bill Amount on the right under Amount column
+            // Row 1 below divider: Base / SGST / CGST neatly on the left; clean Bill Amount on the right under Amount column
             string taxLine1 = string.Format(
                 "Base:{0:0.00}  SGST:{1:0.00}  CGST:{2:0.00}",
                 header.BaseAmt, header.SgstAmt, header.CgstAmt);
-            if (taxLine1.Length > 50) taxLine1 = taxLine1.Substring(0, 50);
-            taxLine1 = taxLine1.PadRight(50);
+            if (taxLine1.Length > 41) taxLine1 = taxLine1.Substring(0, 41);
+            taxLine1 = taxLine1.PadRight(41);
 
-            string billAmtBlock = string.Format("Bill Amount : {0:0.00}", header.NetAmount).PadLeft(26);
+            string billAmtBlock = string.Format("Bill Amount : {0:0.00}", header.NetAmount).PadLeft(25);
             if (includeEscP)
             {
-                // Proper ESC E + ESC G (bold & darker) without C# hex escape collision (\x1BE bug)
-                sb.Append(string.Format("{0}{1}{2}{3}{4}\r\n", margin, taxLine1, BOLD_ON, billAmtBlock, BOLD_OFF));
+                // Use Double-Strike only (ESC G / ESC H) in 17-CPI condensed mode so Bill Amount is crisp and readable
+                sb.Append(string.Format("{0}{1}{2}{3}{4}\r\n", margin, taxLine1, AMT_BOLD_ON, billAmtBlock, AMT_BOLD_OFF));
             }
             else
             {
@@ -157,7 +159,7 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(margin + taxLine2 + "\r\n");
 
             // Row 3 below divider: Store signature right-aligned
-            sb.Append(string.Format("{0}{1,76}\r\n", margin, "for " + storeTitle));
+            sb.Append(string.Format("{0}{1,66}\r\n", margin, "for " + storeTitle));
             sb.Append(lineSep + "\r\n");
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
             sb.Append(margin + Center("THANKYOU", width) + "\r\n");
