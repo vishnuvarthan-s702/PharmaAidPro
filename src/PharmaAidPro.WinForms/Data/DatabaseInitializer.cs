@@ -246,7 +246,7 @@ namespace PharmaAidPro.WinForms.Data
                         'Admin',
                         'C01',
                         6810,
-                        498,
+                        1,
                         39032,
                         '',
                         ''
@@ -256,6 +256,11 @@ namespace PharmaAidPro.WinForms.Data
             else
             {
                 conn.Execute("UPDATE StoreSettings SET StoreName = 'The Nethaji Medical Stores' WHERE StoreName LIKE '%NETAJI%';");
+                var purchaseCount = conn.ExecuteScalar<int>("SELECT COUNT(*) FROM PurchaseHeaders");
+                if (purchaseCount == 0)
+                {
+                    conn.Execute("UPDATE StoreSettings SET NextGrnNumber = 1 WHERE NextGrnNumber = 498;");
+                }
             }
 
             if (conn.ExecuteScalar<int>("SELECT COUNT(*) FROM Users") == 0)
