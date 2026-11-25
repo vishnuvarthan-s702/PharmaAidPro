@@ -345,6 +345,18 @@ namespace PharmaAidPro.WinForms.Forms
                 }
             };
 
+            AttachEnter(_txtDiscountAmt, _cmbSeries);
+            AttachEnter(_cmbSeries, _txtCoinAdj);
+            _txtCoinAdj.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    FocusProductGrid(0, "ProductName");
+                }
+            };
+
             this.KeyDown += delegate(object s, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.F1)
@@ -644,9 +656,317 @@ namespace PharmaAidPro.WinForms.Forms
                     DeleteCurrentGridRow();
                     return true;
                 }
+                if (keyData == Keys.Left || keyData == Keys.Right || keyData == Keys.Up || keyData == Keys.Down)
+                {
+                    if (HandleGridArrowNavigation(keyData))
+                    {
+                        return true;
+                    }
+                }
+            }
+            else if (keyData == Keys.Left || keyData == Keys.Right || keyData == Keys.Up || keyData == Keys.Down)
+            {
+                if (HandleHeaderArrowNavigation(keyData))
+                {
+                    return true;
+                }
             }
 
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private static bool CanLeaveTextBoxLeft(TextBox tb)
+        {
+            if (tb == null) return true;
+            if (tb.Text.Length == 0) return true;
+            if (tb.SelectionLength == tb.Text.Length) return true;
+            return tb.SelectionLength == 0 && tb.SelectionStart == 0;
+        }
+
+        private static bool CanLeaveTextBoxRight(TextBox tb)
+        {
+            if (tb == null) return true;
+            if (tb.Text.Length == 0) return true;
+            if (tb.SelectionLength == tb.Text.Length) return true;
+            return tb.SelectionLength == 0 && tb.SelectionStart >= tb.Text.Length;
+        }
+
+        private void FocusHeaderControl(Control target)
+        {
+            if (target == null) return;
+            target.Focus();
+            var tb = target as TextBox;
+            if (tb != null)
+            {
+                if (tb == _txtGrnDate || tb == _txtInvoiceDate || tb == _txtPaymentDate)
+                {
+                    FullDateMaskHelper.SelectFirstSegment(tb);
+                }
+                else
+                {
+                    tb.SelectAll();
+                }
+            }
+        }
+
+        private void FocusProductGrid(int rowIndex, string colName)
+        {
+            if (!EnsureAmountPayableFilled())
+            {
+                return;
+            }
+            _grid.Focus();
+            if (_grid.Rows.Count == 0)
+            {
+                _grid.Rows.Add();
+            }
+            int safeRow = Math.Max(0, Math.Min(rowIndex, _grid.Rows.Count - 1));
+            string targetCol = _grid.Columns.Contains(colName) ? colName : "ProductName";
+            _grid.CurrentCell = _grid.Rows[safeRow].Cells[targetCol];
+            _grid.BeginEdit(true);
+        }
+
+        private bool HandleHeaderArrowNavigation(Keys keyData)
+        {
+            Control active = this.ActiveControl;
+            if (active == null) return false;
+
+            if (active == _txtGrnDate)
+            {
+                if (keyData == Keys.Down) { _txtGrnDate.Text = FullDateMaskHelper.NormalizeDate(_txtGrnDate.Text); FocusHeaderControl(_txtSupplierName); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtGrnDate)) { _txtGrnDate.Text = FullDateMaskHelper.NormalizeDate(_txtGrnDate.Text); FocusHeaderControl(_txtInvoiceNo); return true; }
+                return false;
+            }
+
+            if (active == _txtSupplierName)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_txtGrnDate); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtSupplierName)) { FocusHeaderControl(_txtInvoiceNo); return true; }
+                if (keyData == Keys.Down)
+                {
+                    // If a supplier is already selected and matches, Down jumps directly to the Product Grid;
+                    // otherwise let TxtSupplierName_KeyDown open the supplier dropdown.
+                    if (_selectedSupplier != null &&
+                        string.Equals(_txtSupplierName.Text.Trim(), _selectedSupplier.SupplierName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        FocusProductGrid(0, "ProductName");
+                        return true;
+                    }
+                    return false;
+                }
+                return false;
+            }
+
+            if (active == _txtInvoiceNo)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_txtGrnDate); return true; }
+                if (keyData == Keys.Down) { FocusHeaderControl(_txtInvoiceDate); return true; }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtInvoiceNo)) { FocusHeaderControl(_txtSupplierName); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtInvoiceNo)) { FocusHeaderControl(_txtDiscountPct); return true; }
+                return false;
+            }
+
+            if (active == _txtInvoiceDate)
+            {
+                if (keyData == Keys.Up)
+                {
+                    _txtInvoiceDate.Text = FullDateMaskHelper.NormalizeDate(_txtInvoiceDate.Text);
+                    _txtPaymentDate.Text = _txtInvoiceDate.Text;
+                    FocusHeaderControl(_txtInvoiceNo);
+                    return true;
+                }
+                if (keyData == Keys.Down)
+                {
+                    _txtInvoiceDate.Text = FullDateMaskHelper.NormalizeDate(_txtInvoiceDate.Text);
+                    _txtPaymentDate.Text = _txtInvoiceDate.Text;
+                    FocusHeaderControl(_txtPaymentDate);
+                    return true;
+                }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtInvoiceDate)) { FocusHeaderControl(_txtSupplierName); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtInvoiceDate)) { FocusHeaderControl(_txtDiscountAmt); return true; }
+                return false;
+            }
+
+            if (active == _txtPaymentDate)
+            {
+                if (keyData == Keys.Up)
+                {
+                    _txtPaymentDate.Text = FullDateMaskHelper.NormalizeDate(_txtPaymentDate.Text);
+                    FocusHeaderControl(_txtInvoiceDate);
+                    return true;
+                }
+                if (keyData == Keys.Down)
+                {
+                    _txtPaymentDate.Text = FullDateMaskHelper.NormalizeDate(_txtPaymentDate.Text);
+                    FocusHeaderControl(_txtAmountPayable);
+                    return true;
+                }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtPaymentDate)) { FocusHeaderControl(_txtSupplierName); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtPaymentDate)) { FocusHeaderControl(_cmbSeries); return true; }
+                return false;
+            }
+
+            if (active == _txtAmountPayable)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_txtPaymentDate); return true; }
+                if (keyData == Keys.Down) { FocusProductGrid(0, "ProductName"); return true; }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtAmountPayable)) { FocusHeaderControl(_txtSupplierName); return true; }
+                if (keyData == Keys.Right && CanLeaveTextBoxRight(_txtAmountPayable)) { FocusHeaderControl(_txtCoinAdj); return true; }
+                return false;
+            }
+
+            if (active == _txtDiscountPct)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_txtInvoiceNo); return true; }
+                if (keyData == Keys.Down) { FocusHeaderControl(_txtDiscountAmt); return true; }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtDiscountPct)) { FocusHeaderControl(_txtInvoiceNo); return true; }
+                return false;
+            }
+
+            if (active == _txtDiscountAmt)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_txtDiscountPct); return true; }
+                if (keyData == Keys.Down) { FocusHeaderControl(_cmbSeries); return true; }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtDiscountAmt)) { FocusHeaderControl(_txtInvoiceDate); return true; }
+                return false;
+            }
+
+            if (active == _cmbSeries)
+            {
+                if (_cmbSeries.DroppedDown) return false;
+                if (keyData == Keys.Left) { FocusHeaderControl(_txtPaymentDate); return true; }
+                if (keyData == Keys.Right) { FocusHeaderControl(_txtCoinAdj); return true; }
+                if (keyData == Keys.Up && _cmbSeries.SelectedIndex <= 0) { FocusHeaderControl(_txtDiscountAmt); return true; }
+                if (keyData == Keys.Down && _cmbSeries.SelectedIndex >= _cmbSeries.Items.Count - 1) { FocusHeaderControl(_txtCoinAdj); return true; }
+                return false;
+            }
+
+            if (active == _txtCoinAdj)
+            {
+                if (keyData == Keys.Up) { FocusHeaderControl(_cmbSeries); return true; }
+                if (keyData == Keys.Down) { FocusProductGrid(0, "ProductName"); return true; }
+                if (keyData == Keys.Left && CanLeaveTextBoxLeft(_txtCoinAdj)) { FocusHeaderControl(_txtAmountPayable); return true; }
+                return false;
+            }
+
+            return false;
+        }
+
+        private bool HandleGridArrowNavigation(Keys keyData)
+        {
+            if (_grid == null || _grid.CurrentCell == null) return false;
+
+            int rowIdx = _grid.CurrentCell.RowIndex;
+            int colIdx = _grid.CurrentCell.ColumnIndex;
+            var editTb = _grid.EditingControl as TextBox;
+
+            if (keyData == Keys.Left)
+            {
+                if (editTb != null && !CanLeaveTextBoxLeft(editTb))
+                {
+                    return false; // Let caret move left inside the text
+                }
+
+                _grid.EndEdit();
+                for (int c = colIdx - 1; c >= 0; c--)
+                {
+                    if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                    {
+                        _grid.CurrentCell = _grid.Rows[rowIdx].Cells[c];
+                        _grid.BeginEdit(true);
+                        return true;
+                    }
+                }
+
+                // At first editable column: move to previous row's last editable column, or up to Supplier Name from row 0
+                if (rowIdx > 0)
+                {
+                    for (int c = _grid.Columns.Count - 1; c >= 0; c--)
+                    {
+                        if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                        {
+                            _grid.CurrentCell = _grid.Rows[rowIdx - 1].Cells[c];
+                            _grid.BeginEdit(true);
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    FocusHeaderControl(_txtSupplierName);
+                    return true;
+                }
+                return false;
+            }
+
+            if (keyData == Keys.Right)
+            {
+                if (editTb != null && !CanLeaveTextBoxRight(editTb))
+                {
+                    return false; // Let caret move right inside the text
+                }
+
+                _grid.EndEdit();
+                for (int c = colIdx + 1; c < _grid.Columns.Count; c++)
+                {
+                    if (_grid.Columns[c].Visible && !_grid.Columns[c].ReadOnly)
+                    {
+                        _grid.CurrentCell = _grid.Rows[rowIdx].Cells[c];
+                        _grid.BeginEdit(true);
+                        return true;
+                    }
+                }
+
+                // At last editable column: move to next row's ProductName
+                if (rowIdx + 1 < _grid.Rows.Count && _grid.Columns.Contains("ProductName"))
+                {
+                    _grid.CurrentCell = _grid.Rows[rowIdx + 1].Cells["ProductName"];
+                    _grid.BeginEdit(true);
+                    return true;
+                }
+                return false;
+            }
+
+            if (keyData == Keys.Up)
+            {
+                _grid.EndEdit();
+                if (rowIdx > 0)
+                {
+                    _grid.CurrentCell = _grid.Rows[rowIdx - 1].Cells[colIdx];
+                    _grid.BeginEdit(true);
+                    return true;
+                }
+
+                // From Row 0, Up jumps naturally into the header field right above the current column
+                string colName = _grid.Columns[colIdx].Name;
+                if (colName == "ProductName" || colName == "Qty")
+                {
+                    FocusHeaderControl(_txtSupplierName);
+                }
+                else if (colName == "Hsn" || colName == "TaxPct" || colName == "PPrice" || colName == "SPrice" || colName == "Mrp")
+                {
+                    FocusHeaderControl(_txtCoinAdj);
+                }
+                else
+                {
+                    FocusHeaderControl(_txtAmountPayable);
+                }
+                return true;
+            }
+
+            if (keyData == Keys.Down)
+            {
+                _grid.EndEdit();
+                if (rowIdx + 1 < _grid.Rows.Count)
+                {
+                    _grid.CurrentCell = _grid.Rows[rowIdx + 1].Cells[colIdx];
+                    _grid.BeginEdit(true);
+                    return true;
+                }
+                return true;
+            }
+
+            return false;
         }
 
         private void DeleteCurrentGridRow()
