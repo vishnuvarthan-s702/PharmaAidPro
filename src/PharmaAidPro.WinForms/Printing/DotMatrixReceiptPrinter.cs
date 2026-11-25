@@ -71,9 +71,6 @@ namespace PharmaAidPro.WinForms.Printing
                 sb.Append(ESC + "@" + ESC + "2\x0F");
             }
 
-            // Top margin below perforation
-            sb.Append("\r\n\r\n");
-
             string storeTitle = (store.StoreName ?? "THE NETHAJI MEDICAL STORES").ToUpperInvariant();
             if (includeEscP)
             {
@@ -164,8 +161,8 @@ namespace PharmaAidPro.WinForms.Printing
             sb.Append(margin + Center("WISH YOU A SPEEDY RECOVERY", width) + "\r\n");
             sb.Append(margin + Center("THANKYOU", width) + "\r\n");
 
-            // Feed 8 blank lines so THANKYOU advances past the printer's tear-off blade (which sits ~8 lines above the print head)
-            sb.Append("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
+            // Feed 11 blank lines so both WISH YOU A SPEEDY RECOVERY and THANKYOU advance cleanly past the tear-off blade
+            sb.Append("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
             return sb.ToString();
         }
 
