@@ -7,6 +7,9 @@ namespace PharmaAidPro.WinForms.Data
 {
     public class PharmaRepository
     {
+        private static readonly System.Random _grnRng = new System.Random();
+        private static readonly object _grnRngLock = new object();
+
         public StoreSettings GetStoreSettings()
         {
             using (var conn = DatabaseInitializer.CreateConnection())
@@ -207,13 +210,68 @@ namespace PharmaAidPro.WinForms.Data
             }
         }
 
+        private static int PickNextRandomGrnNumber(System.Data.SQLite.SQLiteConnection conn, System.Data.SQLite.SQLiteTransaction tx, int preferredCandidate)
+        {
+            var usedList = conn.Query<int>("SELECT GrnNumber FROM PurchaseHeaders", transaction: tx);
+            var used = new HashSet<int>();
+            int maxExisting = 0;
+            foreach (int n in usedList)
+            {
+                used.Add(n);
+                if (n > maxExisting) maxExisting = n;
+            }
+
+            // Priority 1: Random unused 3-digit numbers (100..999)
+            var available3 = new List<int>();
+            for (int n = 100; n <= 999; n++)
+            {
+                if (!used.Contains(n)) available3.Add(n);
+            }
+            if (available3.Count > 0)
+            {
+                if (preferredCandidate >= 100 && preferredCandidate <= 999 && !used.Contains(preferredCandidate))
+                {
+                    return preferredCandidate;
+                }
+                lock (_grnRngLock)
+                {
+                    return available3[_grnRng.Next(available3.Count)];
+                }
+            }
+
+            // Priority 2: Once all 100..999 are used, random unused 4-digit numbers (1000..9999)
+            var available4 = new List<int>();
+            for (int n = 1000; n <= 9999; n++)
+            {
+                if (!used.Contains(n)) available4.Add(n);
+            }
+            if (available4.Count > 0)
+            {
+                if (preferredCandidate >= 1000 && preferredCandidate <= 9999 && !used.Contains(preferredCandidate))
+                {
+                    return preferredCandidate;
+                }
+                lock (_grnRngLock)
+                {
+                    return available4[_grnRng.Next(available4.Count)];
+                }
+            }
+
+            // Fallback if even all 4-digit numbers are exhausted
+            return maxExisting >= 10000 ? maxExisting + 1 : 10000;
+        }
+
         public int GetNextGrnNumber()
         {
             using (var conn = DatabaseInitializer.CreateConnection())
             {
                 var nextFromSettings = conn.ExecuteScalar<int>("SELECT NextGrnNumber FROM StoreSettings WHERE Id = 1");
-                var maxExisting = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(GrnNumber), 0) FROM PurchaseHeaders");
-                return nextFromSettings > maxExisting ? nextFromSettings : maxExisting + 1;
+                int nextGrn = PickNextRandomGrnNumber(conn, null, nextFromSettings);
+                if (nextGrn != nextFromSettings)
+                {
+                    conn.Execute("UPDATE StoreSettings SET NextGrnNumber = @NextGrn WHERE Id = 1;", new { NextGrn = nextGrn });
+                }
+                return nextGrn;
             }
         }
 
@@ -251,8 +309,7 @@ namespace PharmaAidPro.WinForms.Data
             using (var tx = conn.BeginTransaction())
             {
                 var nextFromSettings = conn.ExecuteScalar<int>("SELECT NextGrnNumber FROM StoreSettings WHERE Id = 1", transaction: tx);
-                var maxExisting = conn.ExecuteScalar<int>("SELECT COALESCE(MAX(GrnNumber), 0) FROM PurchaseHeaders", transaction: tx);
-                int grnNo = nextFromSettings > maxExisting ? nextFromSettings : maxExisting + 1;
+                int grnNo = PickNextRandomGrnNumber(conn, tx, nextFromSettings);
                 header.GrnNumber = grnNo;
 
                 conn.Execute(@"
@@ -360,7 +417,8 @@ namespace PharmaAidPro.WinForms.Data
                         WHERE SupplierCode = @SupplierCode;", new { header.NetAmt, header.SupplierCode }, tx);
                 }
 
-                conn.Execute("UPDATE StoreSettings SET NextGrnNumber = @NextGrn WHERE Id = 1;", new { NextGrn = grnNo + 1 }, tx);
+                int upcomingGrn = PickNextRandomGrnNumber(conn, tx, 0);
+                conn.Execute("UPDATE StoreSettings SET NextGrnNumber = @NextGrn WHERE Id = 1;", new { NextGrn = upcomingGrn }, tx);
 
                 tx.Commit();
                 return grnNo;
