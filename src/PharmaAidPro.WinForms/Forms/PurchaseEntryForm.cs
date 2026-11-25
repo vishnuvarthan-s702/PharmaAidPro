@@ -1284,7 +1284,7 @@ namespace PharmaAidPro.WinForms.Forms
             _lblMrpTotal.Text = string.Format("Mrp Total : {0:0.00}", totalMrp);
             _lblNetPayableSummary.Text = string.Format("Calculated Net : {0:0.00}", calcNet);
             _lblDiff.Text = string.Format("Diff : {0:0.00}", diff);
-            _lblDiff.ForeColor = Math.Abs(diff) <= 1.00m ? Color.DarkGreen : Color.DarkRed;
+            _lblDiff.ForeColor = diff == 0m ? Color.DarkGreen : Color.DarkRed;
         }
 
         private void UpdateSelectedRowMarginPanel()
@@ -1313,6 +1313,9 @@ namespace PharmaAidPro.WinForms.Forms
 
         private void ProcessAndSaveGrn()
         {
+            _grid.EndEdit();
+            RecalculateAll();
+
             if (_selectedSupplier == null)
             {
                 MessageBox.Show("Please select a Supplier.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1390,16 +1393,38 @@ namespace PharmaAidPro.WinForms.Forms
 
             decimal gross = 0m, sgst = 0m, cgst = 0m;
             decimal headerDisPct = ParseDec(_txtDiscountPct.Text);
+            var slabGross = new Dictionary<decimal, decimal>();
             foreach (var l in lines)
             {
                 decimal lineGross = ((l.QtyPacks * l.PPrice) - l.DiscountAmt) * (1m - l.ProdDisPercent / 100m);
                 decimal taxable = lineGross * (1m - headerDisPct / 100m);
                 gross += taxable;
-                sgst += Math.Round(taxable * (l.TaxPercent / 200m), 2);
-                cgst += Math.Round(taxable * (l.TaxPercent / 200m), 2);
+                if (!slabGross.ContainsKey(l.TaxPercent)) slabGross[l.TaxPercent] = 0m;
+                slabGross[l.TaxPercent] += taxable;
+            }
+            foreach (var kv in slabGross)
+            {
+                sgst += Math.Round(kv.Value * (kv.Key / 200m), 2);
+                cgst += Math.Round(kv.Value * (kv.Key / 200m), 2);
             }
             decimal coinAdj = ParseDec(_txtCoinAdj.Text);
             decimal net = Math.Round(gross + sgst + cgst + coinAdj, 2);
+            decimal amountPayable = ParseDec(_txtAmountPayable.Text);
+            decimal diff = Math.Round(amountPayable - net, 2);
+
+            if (diff != 0m)
+            {
+                MessageBox.Show(
+                    string.Format(
+                        "Cannot process Purchase Entry! There is a Difference of {0:0.00}.\n\nAmount Payable : {1:0.00}\nCalculated Net : {2:0.00}\n\nPlease check the item amounts, Amount Payable, or Coin Adj. so Diff is 0.00 before processing.",
+                        diff, amountPayable, net),
+                    "Difference Amount Mismatch",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                _txtCoinAdj.Focus();
+                _txtCoinAdj.SelectAll();
+                return;
+            }
 
             var header = new PurchaseHeader
             {
@@ -1410,7 +1435,7 @@ namespace PharmaAidPro.WinForms.Forms
                 InvoiceDate = _txtInvoiceDate.Text.Trim(),
                 PaymentDate = _txtPaymentDate.Text.Trim(),
                 Series = _cmbSeries.SelectedItem.ToString(),
-                AmountPayable = ParseDec(_txtAmountPayable.Text),
+                AmountPayable = amountPayable,
                 DiscountPercent = headerDisPct,
                 DiscountAmt = ParseDec(_txtDiscountAmt.Text),
                 CoinAdj = coinAdj,
