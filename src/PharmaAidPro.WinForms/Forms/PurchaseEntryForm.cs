@@ -297,7 +297,16 @@ namespace PharmaAidPro.WinForms.Forms
             this.Controls.Add(_supplierDropdown);
 
             // Enter navigation across header controls
-            AttachEnter(_txtGrnDate, _txtSupplierName);
+            _txtGrnDate.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    _txtGrnDate.Text = FullDateMaskHelper.NormalizeDate(_txtGrnDate.Text);
+                    FocusHeaderControl(_txtSupplierName);
+                }
+            };
             _txtInvoiceNo.KeyDown += delegate(object s, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Enter)
@@ -311,6 +320,11 @@ namespace PharmaAidPro.WinForms.Forms
                     _txtInvoiceDate.Focus();
                     FullDateMaskHelper.SelectFirstSegment(_txtInvoiceDate);
                 }
+            };
+
+            this.Shown += delegate
+            {
+                FocusHeaderControl(_txtGrnDate);
             };
             _txtInvoiceDate.KeyDown += delegate(object s, KeyEventArgs e)
             {
@@ -479,6 +493,10 @@ namespace PharmaAidPro.WinForms.Forms
             _txtCoinAdj.Text = "0.00";
             _grid.Rows.Clear();
             RecalculateAll();
+            if (this.Visible)
+            {
+                FocusHeaderControl(_txtGrnDate);
+            }
         }
 
         private void TxtSupplierName_TextChanged(object sender, EventArgs e)
@@ -516,7 +534,22 @@ namespace PharmaAidPro.WinForms.Forms
 
         private void TxtSupplierName_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Down && !_supplierDropdown.Visible)
+            if (e.KeyCode == Keys.Enter && !_supplierDropdown.Visible)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                string q = _txtSupplierName.Text == null ? string.Empty : _txtSupplierName.Text.Trim();
+                if (_selectedSupplier == null && q.Length > 0)
+                {
+                    var matches = _repo.SearchSuppliers(q);
+                    if (matches.Count > 0)
+                    {
+                        ApplySelectedSupplier(matches[0]);
+                    }
+                }
+                FocusHeaderControl(_txtInvoiceNo);
+            }
+            else if (e.KeyCode == Keys.Down && !_supplierDropdown.Visible)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
