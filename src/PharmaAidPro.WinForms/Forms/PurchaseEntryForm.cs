@@ -1346,12 +1346,14 @@ namespace PharmaAidPro.WinForms.Forms
             }
 
             decimal calcNet = Math.Round(totalGross + totalSgst + totalCgst + coinAdj, 2);
-            decimal diff = Math.Round(amountPayable - calcNet, 2);
+            decimal diff = Math.Round(calcNet - amountPayable, 2);
 
             _lblTotalTaxSummary.Text = string.Format("Gross: {0:0.00}   SGST: {1:0.00}   CGST: {2:0.00}", totalGross, totalSgst, totalCgst);
             _lblMrpTotal.Text = string.Format("Mrp Total : {0:0.00}", totalMrp);
             _lblNetPayableSummary.Text = string.Format("Calculated Net : {0:0.00}", calcNet);
-            _lblDiff.Text = string.Format("Diff : {0:0.00}", diff);
+            _lblDiff.Text = diff > 0m
+                ? string.Format("Diff : +{0:0.00}", diff)
+                : string.Format("Diff : {0:0.00}", diff);
             _lblDiff.ForeColor = diff == 0m ? Color.DarkGreen : Color.DarkRed;
         }
 
@@ -1482,14 +1484,15 @@ namespace PharmaAidPro.WinForms.Forms
             decimal coinAdj = ParseDec(_txtCoinAdj.Text);
             decimal net = Math.Round(gross + sgst + cgst + coinAdj, 2);
             decimal amountPayable = ParseDec(_txtAmountPayable.Text);
-            decimal diff = Math.Round(amountPayable - net, 2);
+            decimal diff = Math.Round(net - amountPayable, 2);
 
             if (diff != 0m)
             {
+                string diffText = diff > 0m ? string.Format("+{0:0.00}", diff) : string.Format("{0:0.00}", diff);
                 MessageBox.Show(
                     string.Format(
-                        "Cannot process Purchase Entry! There is a Difference of {0:0.00}.\n\nAmount Payable : {1:0.00}\nCalculated Net : {2:0.00}\n\nPlease check the item amounts, Amount Payable, or Coin Adj. so Diff is 0.00 before processing.",
-                        diff, amountPayable, net),
+                        "Cannot process Purchase Entry! There is a Difference of {0}.\n\nAmount Payable : {1:0.00}\nCalculated Net : {2:0.00}\n\nPlease check the item amounts, Amount Payable, or Coin Adj. so Diff is 0.00 before processing.",
+                        diffText, amountPayable, net),
                     "Difference Amount Mismatch",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
