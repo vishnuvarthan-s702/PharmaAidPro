@@ -217,6 +217,18 @@ namespace PharmaAidPro.WinForms.Data
             }
         }
 
+        public PurchaseHeader FindExistingPurchaseByInvoiceNo(string invoiceNo)
+        {
+            if (invoiceNo == null || invoiceNo.Trim().Length == 0) return null;
+            using (var conn = DatabaseInitializer.CreateConnection())
+            {
+                return conn.QuerySingleOrDefault<PurchaseHeader>(@"
+                    SELECT * FROM PurchaseHeaders
+                    WHERE UPPER(TRIM(InvoiceNo)) = UPPER(TRIM(@InvoiceNo))
+                    LIMIT 1", new { InvoiceNo = invoiceNo.Trim() });
+            }
+        }
+
         public static string ParseExpiryToSortKey(string mmyy)
         {
             if (mmyy == null || mmyy.Trim().Length == 0) return "2099-12";

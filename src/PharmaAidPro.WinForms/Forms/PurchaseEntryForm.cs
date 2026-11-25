@@ -298,7 +298,20 @@ namespace PharmaAidPro.WinForms.Forms
 
             // Enter navigation across header controls
             AttachEnter(_txtGrnDate, _txtSupplierName);
-            AttachEnter(_txtInvoiceNo, _txtInvoiceDate);
+            _txtInvoiceNo.KeyDown += delegate(object s, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                    if (!EnsureUniqueInvoiceNo())
+                    {
+                        return;
+                    }
+                    _txtInvoiceDate.Focus();
+                    FullDateMaskHelper.SelectFirstSegment(_txtInvoiceDate);
+                }
+            };
             _txtInvoiceDate.KeyDown += delegate(object s, KeyEventArgs e)
             {
                 if (e.KeyCode == Keys.Enter)
@@ -524,6 +537,28 @@ namespace PharmaAidPro.WinForms.Forms
                     }
                 }
             }
+        }
+
+        private bool EnsureUniqueInvoiceNo()
+        {
+            string inv = _txtInvoiceNo.Text == null ? string.Empty : _txtInvoiceNo.Text.Trim();
+            if (inv.Length == 0) return true;
+
+            var existing = _repo.FindExistingPurchaseByInvoiceNo(inv);
+            if (existing != null)
+            {
+                MessageBox.Show(
+                    string.Format(
+                        "Invoice No '{0}' already exists!\n\nGRN No : {1}\nSupplier : {2}\nDate : {3}\n\nDuplicate invoice numbers cannot be processed.",
+                        inv, existing.GrnNumber, existing.SupplierName, existing.GrnDate),
+                    "Invoice Already Exists",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                _txtInvoiceNo.Focus();
+                _txtInvoiceNo.SelectAll();
+                return false;
+            }
+            return true;
         }
 
         private bool EnsureAmountPayableFilled()
@@ -1326,6 +1361,10 @@ namespace PharmaAidPro.WinForms.Forms
             {
                 MessageBox.Show("Please enter Supplier Invoice No.", "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _txtInvoiceNo.Focus();
+                return;
+            }
+            if (!EnsureUniqueInvoiceNo())
+            {
                 return;
             }
 
